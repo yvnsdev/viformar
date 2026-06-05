@@ -6993,13 +6993,17 @@ async function renderizarAcerca() {
     <div class="acerca-container">
       <div class="acerca-mision">
         <h2><i class="fas fa-bullseye"></i> Misión</h2>
-        <p>Impulsar la transformación digital de empresas, emprendedores y equipos de trabajo mediante
-        soluciones tecnológicas, desarrollo de software y formación práctica orientada a resultados.</p>
+        <p>Capacitar y formar de manera integral a las personas involucradas
+        en el área de la salud pre hospitalaria, en temas relacionados a RCP,
+        primeros auxilios y soporte vital en trauma, con el fin de promover
+        un trato más humano a los pacientes.</p>
       </div>
       <div class="acerca-vision">
         <h2><i class="fas fa-eye"></i> Visión</h2>
-        <p>Ser un referente en innovación tecnológica, acompañando a organizaciones que buscan crecer,
-        optimizar sus procesos y adoptar herramientas digitales de alto impacto.</p>
+        <p>Viformar para el año 2025 se consolidará como un centro de
+        formación especializado con usuarios de todas las regiones del país
+        y a nivel internacional, manteniendo un carácter optimista en la
+        búsqueda de nuevos conocimientos.</p>
       </div>
       <div class="acerca-equipo">
         <h2><i class="fas fa-users"></i> Nuestro Equipo</h2>
