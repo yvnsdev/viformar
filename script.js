@@ -7114,7 +7114,7 @@ async function renderizarAcerca() {
             <span class="contact-icon"><i class="fas fa-phone"></i></span>
             <div>
               <strong>Teléfono</strong>
-              <span>+56 9 1234 5678</span>
+              <span>+57 317 3100936</span>
             </div>
           </li>
           <li>
