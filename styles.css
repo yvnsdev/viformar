@@ -8683,6 +8683,17 @@ body .sidebar-footer strong {
   width: 72px;
 }
 
+.miembro-avatar i {
+  align-items: center;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  display: inline-flex;
+  font-size: 1.65rem;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
 .miembro-avatar-img {
   border: 3px solid var(--color-primary-soft);
   border-radius: 50%;

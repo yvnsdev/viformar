@@ -4829,7 +4829,7 @@ async function descargarCertificado() {
   const nombre = perfil?.nombre || 'Estudiante';
   const fechaEmision = toChileDateTimeString(new Date().toISOString(), false);
   const codigo = `VIF-${cursoActual.id}-${String(currentUserId || '').slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-  const qrData = encodeURIComponent(`https://viformar.cl/validar-certificado?codigo=${codigo}`);
+  const qrData = encodeURIComponent(`https://viformar.com/validar-certificado?codigo=${codigo}`);
   const ventana = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
   if (!ventana) {
     mostrarToast('Permite ventanas emergentes para generar el certificado.', 'warning');
@@ -6966,7 +6966,7 @@ async function renderizarRecursos() {
         </div>
         <span class="resource-type">Guía</span>
         <h3>Manual del Usuario</h3>
-        <p>Guía completa para usar la plataforma AcademIA</p>
+        <p>Guía completa para usar la plataforma Viformar</p>
         <a href="#" class="btn-descargar" onclick="descargarRecurso('manual')">
           <i class="fas fa-download"></i> Descargar
         </a>
@@ -7006,24 +7006,10 @@ async function renderizarAcerca() {
         <div class="equipo-grid">
           <div class="miembro-equipo">
             <div class="miembro-avatar">
-              <img src="assets/tomas.png" alt="Tomas Yevenes" class="miembro-avatar-img">
+              <i class="fas fa-user"></i>
             </div>
-            <h4>Tomas Yevenes</h4>
-            <p>Ingenieria de Software</p>
-          </div>
-          <div class="miembro-equipo">
-            <div class="miembro-avatar">
-              <img src="assets/nico.png" alt="Nicolas Araya" class="miembro-avatar-img">
-            </div>
-            <h4>Nicolas Araya</h4>
-            <p>Inteligencia Artificial</p>
-          </div>
-          <div class="miembro-equipo">
-            <div class="miembro-avatar">
-              <img src="assets/roro.png" alt="Rodrigo Sandoval" class="miembro-avatar-img">
-            </div>
-            <h4>Rodrigo Sandoval</h4>
-            <p>Ciberseguridad</p>
+            <h4>Adaluz Ospina</h4>
+            <p>Equipo Viformar</p>
           </div>
         </div>
       </div>
@@ -7091,20 +7077,20 @@ async function renderizarAcerca() {
       </div>
       <div class="acerca-contacto">
         <h2><i class="fas fa-envelope"></i> Contacto</h2>
-        <p>Para más información sobre AcademIA:</p>
+        <p>Para más información sobre Viformar:</p>
         <ul class="contact-list">
           <li>
             <span class="contact-icon"><i class="fas fa-globe"></i></span>
             <div>
               <strong>Sitio web</strong>
-              <a href="https://academia-ia.cl" target="_blank">academia-ia.cl</a>
+              <a href="https://viformar.com" target="_blank">viformar.com</a>
             </div>
           </li>
           <li>
             <span class="contact-icon"><i class="fab fa-instagram"></i></span>
             <div>
               <strong>Instagram</strong>
-              <a href="https://www.instagram.com/academia-ia" target="_blank">@academia-ia</a>
+              <a href="https://www.instagram.com/viformar" target="_blank">@viformar</a>
             </div>
           </li>
         </ul>
@@ -7117,7 +7103,7 @@ async function renderizarAcerca() {
             <span class="contact-icon"><i class="fas fa-envelope"></i></span>
             <div>
               <strong>Email</strong>
-              <span>contacto@academia-ia.cl</span>
+              <span>contacto@viformar.com</span>
             </div>
           </li>
           <li>
@@ -7186,10 +7172,10 @@ window.mostrarEnlacesUtiles = function () {
     <div class="auth-modal">
       <h2><i class="fas fa-external-link-alt"></i> Enlaces Institucionales</h2>
       <div class="enlaces-container">
-        <a href="https://www.academia-ia.cl" target="_blank" class="enlace-item">
+        <a href="https://www.viformar.com" target="_blank" class="enlace-item">
           <i class="fas fa-globe"></i> Sitio Web Institucional
         </a>
-        <a href="https://academia-ia.cl/intranet" target="_blank" class="enlace-item">
+        <a href="https://viformar.com/intranet" target="_blank" class="enlace-item">
           <i class="fas fa-laptop"></i> Aula Virtual
         </a>
         <a href="https://gmail.com" target="_blank" class="enlace-item">
