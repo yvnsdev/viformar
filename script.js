@@ -7110,14 +7110,14 @@ async function renderizarAcerca() {
             <span class="contact-icon"><i class="fas fa-phone"></i></span>
             <div>
               <strong>Teléfono</strong>
-              <span>+56 9 8430 1770</span>
+              <span>+56 9 1234 5678</span>
             </div>
           </li>
           <li>
             <span class="contact-icon"><i class="fas fa-clock"></i></span>
             <div>
               <strong>Horario</strong>
-              <span>Lunes a Viernes de 9:00 a 18:00 hrs</span>
+              <span>Lunes a Domingo de 9:00 a 18:00 hrs</span>
             </div>
           </li>
         </ul>
