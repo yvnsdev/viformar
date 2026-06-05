@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plataforma Viformar para cursos, módulos, evaluaciones y seguimiento académico en salud y gestión del riesgo.">
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow">
+  <link rel="canonical" href="https://viformar.cl/intranet">
+  <meta property="og:title" content="Plataforma Académica - Viformar">
+  <meta property="og:description" content="Plataforma educativa de Viformar para capacitación en salud y gestión del riesgo.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://viformar.cl/intranet">
+  <meta property="og:image" content="assets/viformar-imagotipo-horizontal-1.png">
+  <meta property="og:locale" content="es_CL">
+  <meta property="og:site_name" content="Viformar">
+  <title>Plataforma Académica - Viformar</title>
+  <link rel="stylesheet" href="class.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Georama:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
+  <link rel="icon" href="assets/viformar-imagotipo-horizontal-1.png" type="image/png">
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header" style="cursor: pointer;" onclick="mostrarSeccion('cursos')">
+      <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Logo Viformar" class="logo-img-small">
+    </div>
+
+    <!-- Mensaje para usuarios no logueados -->
+    <div id="sidebar-not-logged" class="sidebar-not-logged"
+      style="display: none; margin-top: 20px; padding: 10px; text-align: center;">
+      <p><i class="fas fa-exclamation-circle"></i> Debes iniciar sesión para acceder a las opciones</p>
+    </div>
+
+    <!-- Menú para usuarios logueados -->
+    <div id="sidebar-menu" class="sidebar-menu">
+      <ul class="main-menu">
+        <h4 style="margin-left: 10px;">Bienvenido <span id="sidebarWelcomeUser"></span></h4>
+        <li class="menu-item" onclick="mostrarSeccion('cursos')">
+          <i class="fas fa-house"></i>
+          <span>Inicio</span>
+        </li>
+        <li class="menu-item" onclick="mostrarSeccion('cursos')">
+          <i class="fas fa-book-open"></i>
+          <span>Cursos</span>
+        </li>
+        <li class="menu-item" onclick="mostrarSeccion('calificaciones')">
+          <i class="fas fa-graduation-cap"></i>
+          <span>Académico</span>
+        </li>
+        <li class="menu-item" onclick="mostrarSeccion('calendario')">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Calendario</span>
+        </li>
+        <li class="menu-item" onclick="mostrarSeccion('recursos')">
+          <i class="fas fa-university"></i>
+          <span>Recursos</span>
+        </li>
+        <!-- <li class="menu-item" onclick="mostrarSeccion('ayuda')">
+          <i class="fas fa-question-circle"></i>
+          <span>Ayuda</span>
+        </li> -->
+        <li class="menu-item" onclick="mostrarSeccion('acerca')">
+          <i class="fas fa-info-circle"></i>
+          <span>Acerca de</span>
+        </li>
+        <li class="menu-item" id="configBtn" onclick="mostrarSeccion('configuracion')">
+          <i class="fas fa-cogs"></i>
+          <span>Configuración</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Información institucional -->
+    <div class="sidebar-footer">
+      <div class="auth-section">
+        <button id="loginBtn" class="auth-btn"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+        <button id="logoutBtn" class="auth-btn" style="display: none;">
+          <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </button>
+        <button id="userEmail" class="user-info user-profile-btn" type="button" aria-label="Abrir perfil">Ver Perfil</button>
+      </div>
+      <div class="sidebar-footer-copy">
+        <p><strong>Viformar</strong></p>
+        <p>v1.4.2 - 2026</p>
+        <p><i class="fas fa-envelope"></i> contacto@viformar.cl</p>
+        <p style="font-size: 10px; margin-top: 5px;">© 2026 Todos los derechos reservados</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <button id="mobileSidebarToggle" class="mobile-sidebar-toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="logo">
+      <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Logo Viformar" class="navbar-brand-logo">
+      <h1>Viformar: Plataforma académica</h1>
+    </div>
+    <div class="nav-links">
+      <button id="avisosBtn" onclick="mostrarAvisosModal()"><i class="fas fa-bell"></i> Avisos</button>
+      <!-- Otros enlaces existentes -->
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- En index.html, dentro del main-content, antes o después del container -->
+    <div id="welcome-section" class="welcome-container">
+      <div class="welcome-content">
+        <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Logo Viformar" class="welcome-logo">
+        <h1><i class="fas fa-graduation-cap"></i> Bienvenido a Viformar</h1>
+        <p>Capacitación profesional en salud y gestión del riesgo</p>
+
+        <div class="welcome-features">
+          <div class="feature">
+            <i class="fas fa-book-open"></i>
+            <h3>Cursos completos</h3>
+            <p>Accede a módulos, materiales y evaluaciones de tus capacitaciones</p>
+          </div>
+          <div class="feature">
+            <i class="fas fa-tasks"></i>
+            <h3>Evaluaciones</h3>
+            <p>Revisa tus resultados y requisitos de aprobación</p>
+          </div>
+          <div class="feature">
+            <i class="fas fa-video"></i>
+            <h3>Recursos multimedia</h3>
+            <p>Aprende con videoclases embebidas y documentos de apoyo</p>
+          </div>
+        </div>
+
+        <button onclick="mostrarModalAuth()" class="welcome-btn">
+          <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+        </button>
+        <p class="welcome-note">
+          ¿Olvidó su contraseña?
+          <a href="mailto:contacto@viformar.cl">Contacte al administrador</a>
+        </p>
+      </div>
+    </div>
+    <div class="container">
+      <!-- Vista principal de cursos -->
+      <section id="cursos-section" class="active">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Académico</span>
+          <h2><i class="fas fa-chalkboard-teacher"></i> Mis Cursos</h2>
+          <p>Revisa tus cursos, avances y recursos disponibles en la plataforma.</p>
+        </div>
+        <div class="dashboard-grid" id="listaCursos">
+          <!-- Tarjetas de estadísticas -->
+          <div class="stats-card">
+            <h3>Cursos Activos</h3>
+            <div class="value" id="total-cursos">0</div>
+            <div class="label">Cursos disponibles para ti</div>
+          </div>
+
+          <div class="stats-card">
+            <h3>Materiales</h3>
+            <div class="value" id="total-guias">0</div>
+            <div class="label">Materiales de estudio</div>
+          </div>
+
+          <div class="stats-card">
+            <h3>Evaluaciones</h3>
+            <div class="value" id="total-tareas">0</div>
+            <div class="label">Actividades pendientes</div>
+          </div>
+
+          <div class="stats-card">
+            <h3>Videoclases</h3>
+            <div class="value" id="total-capsulas">0</div>
+            <div class="label">Recursos multimedia</div>
+          </div>
+
+          <!-- Actividad reciente -->
+          <div class="recent-activity">
+            <h3><i class="fas fa-history"></i> Actividad Reciente</h3>
+            <div id="activity-feed">
+              <!-- Se llenará dinámicamente con JavaScript -->
+              <div class="no-items">No hay actividad reciente</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Vista detalle de un curso -->
+      <section id="curso-detalle-section">
+        <div class="curso-header">
+          <button id="volverCursos" class="back-btn"><i class="fas fa-arrow-left"></i> Volver al panel</button>
+          <h2 id="curso-titulo"></h2>
+          <p id="curso-descripcion"></p>
+        </div>
+
+        <nav class="curso-nav">
+          <button id="btnPresentacion" class="active" onclick="activarPestanaCurso('presentacion')"><i class="fas fa-info-circle"></i> Presentación</button>
+          <button id="btnGuias" onclick="activarPestanaCurso('guias')"><i class="fas fa-layer-group"></i> Módulos</button>
+          <button id="btnClasesVivo" onclick="activarPestanaCurso('clasesVivo')"><i class="fas fa-video"></i> Clases en vivo</button>
+          <button id="btnTests" onclick="activarPestanaCurso('tests')"><i class="fas fa-clipboard-list"></i> Evaluaciones</button>
+          <button id="btnCertificado" onclick="activarPestanaCurso('certificado')"><i class="fas fa-certificate"></i> Certificado</button>
+          <button id="btnParticipantes" class="curso-nav-btn admin-course-tab"><i class="fas fa-users"></i> Participantes</button>
+          <button id="btnAsistencia" class="curso-nav-btn admin-course-tab"><i class="fas fa-clipboard-check"></i> Asistencia</button>
+          <button id="btnTareas" class="admin-course-tab"><i class="fas fa-tasks"></i> Tareas</button>
+          <button id="btnCapsulas" class="admin-course-tab"><i class="fas fa-video"></i> Cápsulas</button>
+        </nav>
+
+        <!-- Contenido dinámico del curso -->
+        <div id="curso-contenido">
+          <!-- Sección de Guías -->
+          <section id="presentacion-section" class="curso-seccion active">
+            <div class="curso-presentacion">
+              <div class="curso-portada" style="background-color: var(--curso-color)">
+                <div class="course-header">
+                  <h2 id="curso-titulo-presentacion"></h2>
+                  <p id="curso-descripcion-presentacion"></p>
+                </div>
+              </div>
+
+
+              <div class="curso-detalles">
+                <div class="curso-info">
+                  <h3><i class="fas fa-info-circle"></i> Información del Curso</h3>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <i class="fas fa-user-tie"></i>
+                      <span id="curso-profesor"></span>
+                    </div>
+                    <div class="info-item admin-course-meta">
+                      <i class="fas fa-calendar-alt"></i>
+                      <span id="curso-fecha-creacion"></span>
+                    </div>
+                    <div class="info-item">
+                      <i class="fas fa-book"></i>
+                      <span id="curso-total-guias"></span>
+                    </div>
+                    <div class="info-item">
+                      <i class="fas fa-tasks"></i>
+                      <span id="curso-total-tareas"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- En la sección de presentación del curso -->
+                <div class="curso-objetivos">
+                  <div class="section-header">
+                    <h3><i class="fas fa-bullseye"></i> Objetivos</h3>
+                    <button id="btnEditarObjetivos" class="btn-edit-small"><i class="fas fa-edit"></i> Editar</button>
+                  </div>
+                  <div id="curso-objetivos-content"></div>
+                </div>
+
+                <div class="curso-requisitos">
+                  <div class="section-header">
+                    <h3><i class="fas fa-clipboard-check"></i> Requisitos</h3>
+                    <button id="btnEditarRequisitos" class="btn-edit-small"><i class="fas fa-edit"></i> Editar</button>
+                  </div>
+                  <div id="curso-requisitos-content"></div>
+                </div>
+                <div class="curso-progress-panel">
+                  <div class="section-header">
+                    <h3><i class="fas fa-chart-line"></i> Avance del curso</h3>
+                  </div>
+                  <div id="curso-progreso-content"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section id="guias-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Contenido asincrónico</span>
+              <h2><i class="fas fa-layer-group"></i> Módulos</h2>
+              <p>Avanza por videoclases, documentos de apoyo y evaluaciones organizadas por módulo.</p>
+            </div>
+            <div class="form-container guide-form-panel">
+              <div class="field-group">
+                <label for="guiaTitulo">Título</label>
+                <input type="text" id="guiaTitulo" placeholder="Título del material" required>
+              </div>
+              <div class="field-group">
+                <label for="guiaContenido">Contenido</label>
+                <textarea id="guiaContenido" placeholder="Contenido en formato Markdown" required></textarea>
+              </div>
+              <!-- En la sección de guías -->
+              <div class="form-group guide-subpanel">
+                  <label for="guiaEnlaces"><i class="fas fa-link"></i> Enlaces privados o documentos (opcional):</label>
+                <div id="guiaEnlacesContainer" class="enlaces-input-container">
+                  <input type="url" class="enlace-url" placeholder="URL (ej: https://ejemplo.com)">
+                  <input type="text" class="enlace-texto" placeholder="Texto descriptivo (opcional)">
+                  <button onclick="agregarEnlace('guia')" class="add-enlace-btn">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+                <div id="guiaEnlacesPreview" class="enlaces-preview"></div>
+              </div>
+              <div class="form-group guide-subpanel">
+                <label for="guiaArchivos"><i class="fas fa-paperclip"></i> Archivos adjuntos (opcional):</label>
+                <input type="file" id="guiaArchivos" multiple>
+                <div id="guiaArchivosPreview" class="files-preview"></div>
+              </div>
+              <div class="guide-form-footer">
+                <div class="field-group">
+                  <label for="guiaVisibilidad">Visibilidad</label>
+                  <select id="guiaVisibilidad">
+                    <option value="publico">Público</option>
+                    <option value="privado">Privado</option>
+                  </select>
+                </div>
+                <button id="agregarGuia"><i class="fas fa-plus"></i> Agregar material</button>
+              </div>
+            </div>
+            <div class="list-container" id="listaGuias"></div>
+          </section>
+
+          <section id="participantes-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Comunidad</span>
+              <h2><i class="fas fa-users"></i> Participantes</h2>
+              <p>Conoce a tus profesores, asistentes y compañeros dentro de este curso.</p>
+            </div>
+            <div class="container">
+              <div class="section-header">
+                <button onclick="mostrarFormularioInscripcion()" class="btn-primary" id="btn-matricular">
+                  <i class="fas fa-user-plus"></i> Matricular
+                </button>
+              </div>
+              <div id="lista-participantes" class="participants-grid"></div>
+            </div>
+          </section>
+
+          <!-- Sección Asistencia -->
+          <section id="asistencia-section" class="curso-seccion">
+            <!-- El contenido se generará dinámicamente con JavaScript -->
+          </section>
+
+          <!-- Sección de Tareas -->
+          <section id="tareas-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Actividad evaluada</span>
+              <h2><i class="fas fa-tasks"></i> Tareas</h2>
+              <p>Revisa tus actividades, fechas límite, instrucciones y materiales para entregar a tiempo.</p>
+            </div>
+            <div class="form-container task-form-panel">
+              <div class="field-group">
+                <label for="tareaTitulo">Título</label>
+                <input type="text" id="tareaTitulo" placeholder="Título de la tarea" required>
+              </div>
+              <div class="field-group">
+                <label for="tareaDescripcion">Descripción</label>
+                <textarea id="tareaDescripcion" placeholder="Instrucciones detalladas para la entrega" required></textarea>
+              </div>
+              <div class="task-meta-grid">
+                <div class="field-group">
+                  <label for="tareaFecha"><i class="far fa-calendar-alt"></i> Fecha límite</label>
+                  <input type="datetime-local" id="tareaFecha" required>
+                </div>
+                <div class="field-group">
+                  <label for="tareaPuntos"><i class="fas fa-star"></i> Nota máxima</label>
+                  <input type="number" id="tareaPuntos" placeholder="4" min="0" max="7" value="7" readonly>
+                </div>
+              </div>
+              <!-- En la sección de tareas -->
+              <div class="form-group task-subpanel">
+                <label for="tareaEnlaces"><i class="fas fa-link"></i> Enlaces relacionados (opcional):</label>
+                <div id="tareaEnlacesContainer" class="enlaces-input-container">
+                  <input type="url" class="enlace-url" placeholder="URL (ej: https://ejemplo.com)">
+                  <input type="text" class="enlace-texto" placeholder="Texto descriptivo (opcional)">
+                  <button onclick="agregarEnlace('tarea')" class="add-enlace-btn">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+                <div id="tareaEnlacesPreview" class="enlaces-preview"></div>
+              </div>
+              <div class="form-group task-subpanel">
+                <label for="tareaArchivos"><i class="fas fa-paperclip"></i> Archivos adjuntos (opcional):</label>
+                <input type="file" id="tareaArchivos" multiple>
+                <div id="tareaArchivosPreview" class="files-preview"></div>
+              </div>
+              <div class="task-form-footer">
+                <button id="agregarTarea"><i class="fas fa-plus"></i> Agregar Tarea</button>
+              </div>
+            </div>
+            <div class="list-container" id="listaTareas"></div>
+          </section>
+
+          <!-- Sección de Tests -->
+          <section id="tests-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Evaluaciones</span>
+              <h2><i class="fas fa-clipboard-list"></i> Evaluaciones</h2>
+              <p>Revisa evaluaciones disponibles, estado, nota obtenida y requisito mínimo de aprobación.</p>
+            </div>
+            <div class="form-container test-form-panel">
+              <div class="field-group">
+                <label for="testTitulo">Título</label>
+                <input type="text" id="testTitulo" placeholder="Título del test" required>
+              </div>
+              <div class="field-group">
+                <label for="testDescripcion">Descripción</label>
+                <textarea id="testDescripcion" placeholder="Indicaciones generales para responder"></textarea>
+              </div>
+              <div class="task-meta-grid">
+                <div class="field-group">
+                  <label for="testFecha"><i class="far fa-calendar-alt"></i> Fecha límite</label>
+                  <input type="datetime-local" id="testFecha" required>
+                </div>
+                <div class="field-group">
+                  <label for="testPuntaje"><i class="fas fa-star"></i> Puntaje total</label>
+                  <input type="number" id="testPuntaje" min="1" step="0.1" value="1" readonly>
+                </div>
+              </div>
+              <div class="test-builder">
+                <div class="section-header">
+                  <h3><i class="fas fa-list-check"></i> Preguntas</h3>
+                  <button type="button" id="agregarPreguntaTest" class="btn-secondary">
+                    <i class="fas fa-plus"></i> Agregar pregunta
+                  </button>
+                </div>
+                <div id="testPreguntasBuilder" class="test-question-list"></div>
+              </div>
+              <div class="task-form-footer">
+                <button id="agregarTest"><i class="fas fa-plus"></i> Crear Test</button>
+              </div>
+            </div>
+            <div class="list-container" id="listaTests"></div>
+          </section>
+
+          <section id="clasesVivo-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Complemento sincrónico</span>
+              <h2><i class="fas fa-video"></i> Clases en vivo</h2>
+              <p>Consulta próximas sesiones, enlaces de acceso y grabaciones cuando estén disponibles.</p>
+            </div>
+            <div id="lista-reuniones-curso" class="meetings-list"></div>
+          </section>
+
+          <section id="certificado-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Certificación</span>
+              <h2><i class="fas fa-certificate"></i> Certificado</h2>
+              <p>El certificado se habilita cuando todas las tareas tienen nota y la asistencia alcanza al menos 75%.</p>
+            </div>
+            <div id="certificado-content"></div>
+          </section>
+
+          <!-- Sección de Cápsulas -->
+          <section id="capsulas-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Recurso breve</span>
+              <h2><i class="fas fa-video"></i> Cápsulas</h2>
+              <p>Accede a videos, artículos y presentaciones breves para reforzar lo visto en clases.</p>
+            </div>
+            <div class="form-container capsule-form-panel">
+              <div class="field-group">
+                <label for="capsulaTitulo">Título</label>
+                <input type="text" id="capsulaTitulo" placeholder="Título de la cápsula" required>
+              </div>
+              <div class="capsule-meta-grid">
+                <div class="field-group">
+                  <label for="capsulaTipo"><i class="fas fa-tag"></i> Tipo</label>
+                  <select id="capsulaTipo">
+                    <option value="video">Video</option>
+                    <option value="articulo">Artículo</option>
+                    <option value="presentacion">Presentación</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="capsulaDuracion"><i class="far fa-clock"></i> Duración</label>
+                  <input type="number" id="capsulaDuracion" min="1" placeholder="10 minutos">
+                </div>
+              </div>
+              <div id="capsulaUrlContainer" class="field-group capsule-url-field">
+                <label for="capsulaUrl"><i class="fas fa-link"></i> URL del recurso</label>
+                <input type="url" id="capsulaUrl" placeholder="https://ejemplo.com" required>
+              </div>
+              <div class="field-group">
+                <label for="capsulaDescripcion">Descripción</label>
+                <textarea id="capsulaDescripcion" placeholder="Descripción y notas"></textarea>
+              </div>
+              <div class="capsule-form-footer">
+                <button id="agregarCapsula"><i class="fas fa-plus"></i> Agregar Cápsula</button>
+              </div>
+            </div>
+            <div class="list-container" id="listaCapsulas"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Sección Calendario -->
+      <section id="calendario-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Planificación</span>
+          <h2><i class="fas fa-calendar-alt"></i> Calendario de Tareas</h2>
+          <p>Consulta fechas importantes, entregas y actividades programadas.</p>
+        </div>
+        <div id="calendar"></div>
+      </section>
+
+      <!-- Sección Videochat -->
+      <section id="videochat-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Reuniones</span>
+          <h2><i class="fas fa-video"></i> Videochat</h2>
+          <p>Encuentra tus sesiones en vivo y entra a las videollamadas del curso cuando estén disponibles.</p>
+        </div>
+        <div class="videochat-container">
+          <div class="videochat-actions">
+            <button id="crearReunionBtn" class="btn-primary">
+              <i class="fas fa-plus"></i> Crear reunión
+            </button>
+          </div>
+          <div id="lista-reuniones" class="meetings-list"></div>
+        </div>
+      </section>
+
+      <!-- Sección Calificaciones -->
+      <section id="calificaciones-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Evaluación</span>
+          <h2><i class="fas fa-star"></i> Calificaciones</h2>
+          <p>Revisa notas, promedios y resultados asociados a tus cursos.</p>
+        </div>
+        <div class="grades-container">
+          <div class="grades-controls">
+            <div class="field-group">
+              <label for="curso-select-grades">Curso</label>
+              <select id="curso-select-grades" class="form-select">
+                <option value="">Seleccionar curso</option>
+              </select>
+            </div>
+            <button id="actualizar-calificaciones" class="btn-secondary">
+              <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+          </div>
+          <div id="tabla-calificaciones" class="grades-table"></div>
+        </div>
+      </section>
+
+      <!-- Sección de Ayuda -->
+      <section id="ayuda-section">
+        <div class="section-content" id="ayuda-content">
+          <!-- Contenido se cargará dinámicamente -->
+        </div>
+      </section>
+
+      <!-- Sección de Noticias -->
+      <section id="noticias-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Comunicaciones</span>
+          <h2><i class="fas fa-newspaper"></i> Noticias y Novedades</h2>
+          <p>Mantente al día con actualizaciones y novedades de Viformar.</p>
+        </div>
+        <div class="section-content" id="noticias-content">
+          <!-- Contenido se cargará dinámicamente -->
+        </div>
+      </section>
+
+      <!-- Sección de Recursos -->
+      <section id="recursos-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Biblioteca institucional</span>
+          <h2><i class="fas fa-university"></i> Recursos Institucionales</h2>
+          <p>Encuentra documentos, manuales y enlaces oficiales de apoyo.</p>
+        </div>
+        <div class="section-content" id="recursos-content">
+          <!-- Contenido se cargará dinámicamente -->
+        </div>
+      </section>
+
+      <!-- Sección Acerca de -->
+      <section id="acerca-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Institucional</span>
+          <h2><i class="fas fa-info-circle"></i> Acerca de Viformar</h2>
+          <p>Conoce nuestra misión, equipo y canales de contacto.</p>
+        </div>
+        <div class="section-content" id="acerca-content">
+          <!-- Contenido se cargará dinámicamente -->
+        </div>
+      </section>
+
+      <section id="perfil-section"></section>
+
+      <section id="configuracion-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Administración</span>
+          <h2><i class="fas fa-cogs"></i> Configuración</h2>
+          <p>Administra la plataforma desde un solo lugar.</p>
+        </div>
+
+        <div class="config-admin-grid">
+          <div id="crear-curso-section" class="config-form-shell admin-user-panel">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Cursos</span>
+              <h2 id="course-title"><i class="fas fa-book-open"></i><span>Crear Nuevo Curso</span></h2>
+              <p>Configura un nuevo curso y déjalo disponible para gestión académica.</p>
+            </div>
+
+            <div id="añadirCurso" class="form-container create-course-panel">
+              <div class="form-row">
+                <div class="field-group">
+                  <label for="cursoNombre">Nombre</label>
+                  <input type="text" id="cursoNombre" placeholder="Ej: Introducción a IA">
+                </div>
+                <div class="field-group field-group-wide">
+                  <label for="cursoDescripcion">Descripción</label>
+                  <input type="text" id="cursoDescripcion" placeholder="Resumen breve del curso">
+                </div>
+                <div class="field-group color-field">
+                  <label for="cursoColor">Color</label>
+                  <input type="color" id="cursoColor" value="#c62828" title="Color del curso">
+                </div>
+                <button id="agregarCurso" class="create-course-btn"><i class="fas fa-plus"></i> Crear Curso</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- Modal para edición -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <button type="button" class="close" aria-label="Cerrar modal">&times;</button>
+        <div id="modal-content"></div>
+      </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div id="chatbot-btn" class="chatbot-btn">
+      <i class="fas fa-robot"></i>
+    </div>
+
+    <div id="chatbot-container" class="chatbot-container">
+      <div class="chatbot-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="assets/cytro.png" alt="Avatar Cytro" style="width: 35px; height: 35px; border-radius: 50%;">
+          <h3 style="margin: 0;">Cytro</h3>
+        </div>
+        <button id="chatbot-close" class="chatbot-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="chatbot-messages" class="chatbot-messages"></div>
+
+      <div class="chatbot-input-container">
+        <input type="text" id="chatbot-input" class="chatbot-input" placeholder="Escribe tu pregunta...">
+        <button id="chatbot-send" class="chatbot-send">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="class.js"></script>
+  <!-- FullCalendar -->
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/es.min.js'></script>
+
+  <!-- Jitsi Meet (para videochat) -->
+  <script src='https://meet.jit.si/external_api.js'></script>
+</body>
+
+</html>
