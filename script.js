@@ -7008,7 +7008,7 @@ async function renderizarAcerca() {
             <div class="miembro-avatar">
               <i class="fas fa-user"></i>
             </div>
-            <h4>Adaluz Ospina</h4>
+            <h4>Adaluz Ospino</h4>
             <p>Equipo Viformar</p>
           </div>
         </div>
