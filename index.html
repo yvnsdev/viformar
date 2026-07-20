@@ -110,38 +110,186 @@
   <!-- Main Content -->
   <main class="main-content">
     <!-- En index.html, dentro del main-content, antes o después del container -->
-    <div id="welcome-section" class="welcome-container">
-      <div class="welcome-content">
-        <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Logo Viformar" class="welcome-logo">
-        <h1><i class="fas fa-graduation-cap"></i> Bienvenido a Viformar</h1>
-        <p>Capacitación profesional en salud y gestión del riesgo</p>
+    <div id="welcome-section" class="welcome-container landing-page">
+      <header class="landing-header" aria-label="Principal">
+        <a class="landing-brand" href="#inicio" aria-label="Inicio Viformar">
+          <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Viformar - Formación para la vida">
+        </a>
+        <nav class="landing-nav" aria-label="Secciones institucionales">
+          <a href="#programas">Programas</a>
+          <a href="#metodo">Método</a>
+          <a href="#identidad">Identidad</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
+        <button onclick="mostrarModalAuth()" class="landing-login-btn">
+          <i class="fas fa-user-lock"></i>
+          <span>Plataforma</span>
+        </button>
+      </header>
 
-        <div class="welcome-features">
-          <div class="feature">
-            <i class="fas fa-book-open"></i>
-            <h3>Cursos completos</h3>
-            <p>Accede a módulos, materiales y evaluaciones de tus capacitaciones</p>
-          </div>
-          <div class="feature">
-            <i class="fas fa-tasks"></i>
-            <h3>Evaluaciones</h3>
-            <p>Revisa tus resultados y requisitos de aprobación</p>
-          </div>
-          <div class="feature">
-            <i class="fas fa-video"></i>
-            <h3>Material multimedia</h3>
-            <p>Aprende con videoclases embebidas y documentos de apoyo</p>
+      <section id="inicio" class="landing-hero">
+        <div class="landing-hero-copy">
+          <span class="landing-kicker">Centro de Capacitación y Entrenamiento</span>
+          <h1>Formación para la vida</h1>
+          <p>
+            Humanizamos la enseñanza pre hospitalaria con preparación real en RCP, primeros auxilios,
+            soporte vital en trauma y gestión del riesgo.
+          </p>
+          <div class="landing-actions">
+            <a href="#programas" class="landing-primary-btn">
+              <i class="fas fa-heart-pulse"></i>
+              <span>Ver formación</span>
+            </a>
+            <button onclick="mostrarModalAuth()" class="landing-secondary-btn">
+              <i class="fas fa-arrow-right-to-bracket"></i>
+              <span>Ingresar</span>
+            </button>
           </div>
         </div>
+        <div class="landing-hero-panel" aria-label="Entrenamiento en salud pre hospitalaria">
+          <img src="assets/viformar-imagotipo-horizontal-1.png" alt="Viformar" class="landing-symbol">
+          <div class="landing-pulse" aria-hidden="true"></div>
+          <div class="landing-hero-card">
+            <span>Propósito</span>
+            <strong>Enseñar para salvar vidas</strong>
+            <p>Preparación cercana, empática y oportuna para responder cuando más importa.</p>
+          </div>
+        </div>
+      </section>
 
-        <button onclick="mostrarModalAuth()" class="welcome-btn">
-          <i class="fas fa-sign-in-alt"></i> Iniciar sesión
-        </button>
-        <p class="welcome-note">
-          ¿Olvidó su contraseña?
-          <a href="mailto:contacto@viformar.com">Contacte al administrador</a>
-        </p>
-      </div>
+      <section id="programas" class="landing-section landing-programs">
+        <div class="landing-section-heading">
+          <span>Áreas formativas</span>
+          <h2>Capacitación en salud y gestión del riesgo</h2>
+        </div>
+        <div class="landing-card-grid">
+          <article class="landing-card">
+            <i class="fas fa-kit-medical"></i>
+            <h3>Primeros auxilios</h3>
+            <p>Entrenamiento práctico para actuar con criterio, calma y cuidado ante emergencias.</p>
+          </article>
+          <article class="landing-card">
+            <i class="fas fa-heart-pulse"></i>
+            <h3>RCP</h3>
+            <p>Formación orientada a respuesta inmediata, técnica segura y trato humano del paciente.</p>
+          </article>
+          <article class="landing-card">
+            <i class="fas fa-truck-medical"></i>
+            <h3>Soporte vital en trauma</h3>
+            <p>Competencias para escenarios pre hospitalarios donde la preparación marca la diferencia.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section landing-purpose">
+        <div class="landing-purpose-card">
+          <span>Propósito</span>
+          <h2>Preparación real para actuar con humanidad</h2>
+          <p>
+            Viformar fue creado para humanizar la enseñanza pre hospitalaria y llevar a cada usuario a
+            una preparación real, con lenguaje claro, acompañamiento y foco en el trato digno del paciente.
+          </p>
+        </div>
+        <div class="landing-mission-grid">
+          <article>
+            <i class="fas fa-hand-holding-heart"></i>
+            <h3>Misión</h3>
+            <p>
+              Capacitar integralmente a personas vinculadas al área de la salud pre hospitalaria en RCP,
+              primeros auxilios y soporte vital en trauma.
+            </p>
+          </article>
+          <article>
+            <i class="fas fa-compass"></i>
+            <h3>Visión</h3>
+            <p>
+              Consolidar un centro especializado, con usuarios en distintas regiones y proyección
+              internacional desde la búsqueda permanente de nuevos conocimientos.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="metodo" class="landing-section landing-method">
+        <div class="landing-section-heading">
+          <span>Modelo de entrenamiento</span>
+          <h2>Aprendizaje práctico, evaluable y acompañado</h2>
+        </div>
+        <div class="landing-steps" aria-label="Proceso de formación">
+          <article>
+            <span>01</span>
+            <h3>Contexto</h3>
+            <p>Se explican principios, riesgos y criterios de actuación antes de cada técnica.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Demostración</h3>
+            <p>Los procedimientos se muestran con foco en seguridad, oportunidad y trato humano.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Práctica</h3>
+            <p>El estudiante entrena escenarios realistas para ganar confianza y precisión.</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Evaluación</h3>
+            <p>La plataforma ordena módulos, actividades, asistencia, calificaciones y certificados.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section landing-platform">
+        <div class="landing-platform-copy">
+          <span>Experiencia académica</span>
+          <h2>Todo el seguimiento en una sola plataforma</h2>
+          <p>
+            La intranet de Viformar permite administrar cursos, materiales, clases en vivo, cápsulas,
+            tareas, evaluaciones y certificados para una experiencia continua.
+          </p>
+        </div>
+        <div class="landing-platform-grid">
+          <div><i class="fas fa-book-open"></i><span>Módulos y guías</span></div>
+          <div><i class="fas fa-video"></i><span>Videoclases y cápsulas</span></div>
+          <div><i class="fas fa-calendar-check"></i><span>Calendario académico</span></div>
+          <div><i class="fas fa-certificate"></i><span>Certificación</span></div>
+        </div>
+      </section>
+
+      <section id="identidad" class="landing-section landing-identity">
+        <div class="landing-identity-copy">
+          <span>Identidad Viformar</span>
+          <h2>Vitalidad, cuidado y cooperación</h2>
+          <p>
+            El símbolo integra corazón y cruz: vida, auxilio y protección. Sus cintas representan la
+            complementariedad entre estudiante y entidad formadora, desde la empatía y el movimiento.
+          </p>
+        </div>
+        <div class="landing-values">
+          <div><strong>Heroísmo</strong><span>Enseñamos para salvar vidas.</span></div>
+          <div><strong>Pasión</strong><span>Entregamos lo mejor en cada proceso.</span></div>
+          <div><strong>Empatía</strong><span>Conectamos con trato claro e inclusivo.</span></div>
+          <div><strong>Honestidad</strong><span>Cumplimos lo prometido con rectitud.</span></div>
+        </div>
+      </section>
+
+      <section id="contacto" class="landing-section landing-contact">
+        <div>
+          <span>Plataforma académica</span>
+          <h2>Accede a tus cursos, módulos y evaluaciones</h2>
+          <p>La intranet reúne materiales, videoclases, calendario académico, calificaciones y certificados.</p>
+        </div>
+        <div class="landing-contact-actions">
+          <button onclick="mostrarModalAuth()" class="landing-primary-btn">
+            <i class="fas fa-sign-in-alt"></i>
+            <span>Iniciar sesión</span>
+          </button>
+          <a href="mailto:contacto@viformar.com" class="landing-secondary-btn">
+            <i class="fas fa-envelope"></i>
+            <span>contacto@viformar.com</span>
+          </a>
+        </div>
+      </section>
     </div>
     <div class="container">
       <!-- Vista principal de cursos -->
