@@ -19,17 +19,19 @@
 
 .module-manager .field-group { flex: 1; margin: 0; }
 .module-manager .module-order-field { flex: 0 0 110px; }
-.learning-workspace { display: grid; gap: 20px; grid-template-columns: minmax(240px, 32%) 1fr; }
+.learning-workspace { display: grid; gap: 16px; grid-template-columns: 1fr; }
 .learning-outline, .learning-viewer { background: #fff; border: 1px solid #f1cecb; border-radius: 14px; padding: 18px; }
 .learning-outline h3 { color: var(--curso-color, #c62828); margin-top: 0; }
 .learning-module { border-top: 1px solid #f3dfdd; padding: 14px 0; }
 .learning-module:first-of-type { border-top: 0; padding-top: 0; }
 .learning-module-head { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
 .learning-module-head h4 { margin: 0; }
-.learning-item { align-items: center; background: transparent; border: 0; border-radius: 8px; color: #4d3432; cursor: pointer; display: flex; font: inherit; gap: 9px; margin-top: 6px; padding: 9px; text-align: left; width: 100%; }
+.learning-item { align-items: center; background: #fff; border: 1px solid #f1dfdd; border-radius: 8px; color: #4d3432; cursor: pointer; display: flex; font: inherit; gap: 10px; margin-top: 8px; min-height: 46px; padding: 10px 12px; text-align: left; width: 100%; }
 .learning-item:hover, .learning-item.active { background: #fff1ef; color: #a90c0a; }
+.learning-item > span { flex: 1; min-width: 0; }
+.learning-item-type { color: #796562; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
 .learning-item.is-complete i { color: #23884b; }
-.learning-viewer-empty { align-items: center; color: #796562; display: flex; flex-direction: column; justify-content: center; min-height: 320px; text-align: center; }
+.learning-viewer-empty { align-items: center; color: #796562; display: flex; flex-direction: column; justify-content: center; min-height: 180px; text-align: center; }
 .learning-viewer .capsula-player { margin: 16px 0; }
 .learning-resource-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .learning-resource-actions button { margin: 0; }
@@ -4929,6 +4931,71 @@ select:focus {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Recursos dentro de un curso: una lista escaneable en vez de tarjetas en cuadrícula. */
+.content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content-list .content-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 9px;
+  padding: 16px 18px;
+}
+
+.content-list .content-card-top {
+  display: contents;
+}
+
+.content-list .content-card > :not(.content-card-top) {
+  grid-column: 2;
+}
+
+.content-list .content-card-top .content-icon {
+  grid-column: 1;
+  grid-row: 1 / span 10;
+}
+
+.content-list .content-card-top .badge {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.content-list .content-card h3 {
+  margin-top: 4px;
+}
+
+.content-list .content-preview {
+  max-height: 110px;
+}
+
+.content-list .content-resources {
+  grid-template-columns: 1fr;
+}
+
+.content-list .content-footer,
+.content-list .student-delivery,
+.content-list .content-actions {
+  margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+  .content-list .content-card {
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 14px;
+  }
+
+  .content-list .content-icon {
+    height: 34px;
+    width: 34px;
+  }
 }
 
 .content-card {

@@ -2173,7 +2173,7 @@ function renderizarGuias() {
     return;
   }
   const guiasOrdenadas = [...guiasCurso].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  let contenidoHTML = '<div class="content-card-grid">';
+  let contenidoHTML = '<div class="content-list">';
   guiasOrdenadas.forEach(guia => {
     const archivosHTML = guia.archivos && guia.archivos.length > 0 ? `
             <div class="archivos-list">
@@ -2260,7 +2260,7 @@ async function renderizarTareas() {
     return;
   }
   const tareasOrdenadas = [...tareasCurso].sort((a, b) => new Date(a.fecha_limite) - new Date(b.fecha_limite));
-  let contenidoHTML = '<div class="content-card-grid">';
+  let contenidoHTML = '<div class="content-list">';
   const { data: entregasCurso, error } = await supabase
     .from('entregas')
     .select('*')
@@ -2466,7 +2466,7 @@ async function renderizarTests() {
     return;
   }
   const testsOrdenados = [...testsCurso].sort((a, b) => new Date(a.fecha_limite) - new Date(b.fecha_limite));
-  let contenidoHTML = '<div class="content-card-grid">';
+  let contenidoHTML = '<div class="content-list">';
   for (const test of testsOrdenados) {
     const preguntas = Array.isArray(test.preguntas) ? test.preguntas : [];
     const fechaLimite = new Date(test.fecha_limite);
@@ -2933,7 +2933,7 @@ function renderizarCapsulas() {
     return;
   }
   const capsulasOrdenadas = [...capsulasCurso].sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
-  let contenidoHTML = '<div class="content-card-grid">';
+  let contenidoHTML = '<div class="content-list">';
   capsulasOrdenadas.forEach(capsula => {
     let tipoBadge = '';
     let tipoIcon = 'fa-video';
@@ -3066,7 +3066,7 @@ async function renderizarAprendizaje() {
     .find(item => String(item.id) === String(contenidoSeleccionado.id));
   const esquema = grupos.map(modulo => {
     const items = obtenerItemsModulo(modulo.id);
-    return `<div class="learning-module"><div class="learning-module-head"><h4>${escaparHtml(modulo.titulo)}</h4>${!modulo.esGeneral && !esEstudianteActual() ? `<button class="delete-btn icon-btn" onclick="eliminarModulo('${modulo.id}')" title="Eliminar módulo"><i class="fas fa-trash"></i></button>` : ''}</div>${items.length ? items.map(item => `<button class="learning-item ${contenidoSeleccionado?.tipo === item.tipoContenido && String(contenidoSeleccionado?.id) === String(item.id) ? 'active' : ''} ${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? 'is-complete' : ''}" onclick="seleccionarContenidoCurso('${item.tipoContenido}', '${item.id}')"><i class="fas ${item.icono}"></i><span>${escaparHtml(item.titulo)}</span>${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? '<i class="fas fa-check-circle"></i>' : ''}</button>`).join('') : '<p class="text-muted">Sin contenidos.</p>'}</div>`;
+    return `<div class="learning-module"><div class="learning-module-head"><h4>${escaparHtml(modulo.titulo)}</h4>${!modulo.esGeneral && !esEstudianteActual() ? `<button class="delete-btn icon-btn" onclick="eliminarModulo('${modulo.id}')" title="Eliminar módulo"><i class="fas fa-trash"></i></button>` : ''}</div>${items.length ? items.map(item => `<button class="learning-item ${contenidoSeleccionado?.tipo === item.tipoContenido && String(contenidoSeleccionado?.id) === String(item.id) ? 'active' : ''} ${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? 'is-complete' : ''}" onclick="seleccionarContenidoCurso('${item.tipoContenido}', '${item.id}')"><i class="fas ${item.icono}"></i><span>${escaparHtml(item.titulo)}</span><small class="learning-item-type">${escaparHtml(item.etiqueta)}</small>${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? '<i class="fas fa-check-circle"></i>' : ''}</button>`).join('') : '<p class="text-muted">Sin contenidos.</p>'}</div>`;
   }).join('');
   let visor = '<div class="learning-viewer-empty"><i class="fas fa-book-open fa-2x"></i><p>Selecciona un contenido para comenzar.</p></div>';
   if (seleccionado) {
