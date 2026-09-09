@@ -347,6 +347,7 @@
 
         <nav class="curso-nav">
           <button id="btnPresentacion" class="active" onclick="activarPestanaCurso('presentacion')"><i class="fas fa-info-circle"></i> Presentación</button>
+          <button id="btnContenido" onclick="activarPestanaCurso('contenido')"><i class="fas fa-list-ul"></i> Contenido</button>
           <button id="btnGuias" onclick="activarPestanaCurso('guias')"><i class="fas fa-layer-group"></i> Módulos</button>
           <button id="btnClasesVivo" onclick="activarPestanaCurso('clasesVivo')"><i class="fas fa-video"></i> Clases en vivo</button>
           <button id="btnTests" onclick="activarPestanaCurso('tests')"><i class="fas fa-clipboard-list"></i> Evaluaciones</button>
@@ -430,6 +431,10 @@
                 <input type="text" id="guiaTitulo" placeholder="Título del material" required>
               </div>
               <div class="field-group">
+                <label for="guiaModulo">Módulo</label>
+                <select id="guiaModulo"><option value="">Sin módulo / contenido general</option></select>
+              </div>
+              <div class="field-group">
                 <label for="guiaContenido">Contenido</label>
                 <textarea id="guiaContenido" placeholder="Contenido en formato Markdown" required></textarea>
               </div>
@@ -462,6 +467,26 @@
               </div>
             </div>
             <div class="list-container" id="listaGuias"></div>
+          </section>
+
+          <section id="contenido-section" class="curso-seccion">
+            <div class="page-title-card">
+              <span class="form-eyebrow">Ruta de aprendizaje</span>
+              <h2><i class="fas fa-list-ul"></i> Contenido del curso</h2>
+              <p>Selecciona un recurso, completa la actividad y revisa tu avance en tiempo real.</p>
+            </div>
+            <div class="module-manager admin-course-tab">
+              <div class="field-group">
+                <label for="moduloTitulo">Nuevo módulo</label>
+                <input id="moduloTitulo" type="text" placeholder="Ej.: Módulo 1: Fundamentos">
+              </div>
+              <div class="field-group module-order-field">
+                <label for="moduloOrden">Orden</label>
+                <input id="moduloOrden" type="number" min="1" value="1">
+              </div>
+              <button id="agregarModulo" class="btn-primary" type="button"><i class="fas fa-plus"></i> Agregar módulo</button>
+            </div>
+            <div id="aprendizaje-content" class="learning-workspace"></div>
           </section>
 
           <section id="participantes-section" class="curso-seccion">
@@ -548,6 +573,14 @@
                 <input type="text" id="testTitulo" placeholder="Título del test" required>
               </div>
               <div class="field-group">
+                <label for="testModulo">Módulo</label>
+                <select id="testModulo"><option value="">Sin módulo / contenido general</option></select>
+              </div>
+              <div class="field-group">
+                <label for="testPorcentajeAprobacion">Porcentaje mínimo de aprobación</label>
+                <input type="number" id="testPorcentajeAprobacion" min="1" max="100" value="60">
+              </div>
+              <div class="field-group">
                 <label for="testDescripcion">Descripción</label>
                 <textarea id="testDescripcion" placeholder="Indicaciones generales para responder"></textarea>
               </div>
@@ -606,6 +639,10 @@
               <div class="field-group">
                 <label for="capsulaTitulo">Título</label>
                 <input type="text" id="capsulaTitulo" placeholder="Título de la cápsula" required>
+              </div>
+              <div class="field-group">
+                <label for="capsulaModulo">Módulo</label>
+                <select id="capsulaModulo"><option value="">Sin módulo / contenido general</option></select>
               </div>
               <div class="capsule-meta-grid">
                 <div class="field-group">

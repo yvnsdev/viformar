@@ -848,3 +848,170 @@ using (
     name like ('entregas/' || auth.uid()::text || '/%')
   )
 );
+
+-- Plataforma de aprendizaje: módulos, evaluaciones, avance persistente y certificados verificables.
+create table if not exists public.curso_modulos (
+  id uuid primary key default gen_random_uuid(),
+  curso_id integer not null references public.cursos(id) on delete cascade,
+  titulo text not null,
+  orden integer not null default 1,
+  user_id uuid not null references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.tests (
+  id serial primary key,
+  curso_id integer not null references public.cursos(id) on delete cascade,
+  modulo_id uuid null references public.curso_modulos(id) on delete set null,
+  titulo text not null,
+  descripcion text null,
+  fecha_limite timestamptz not null,
+  puntaje_total numeric(8,2) not null,
+  porcentaje_aprobacion numeric(5,2) not null default 60 check (porcentaje_aprobacion between 1 and 100),
+  preguntas jsonb not null default '[]'::jsonb,
+  estado text not null default 'publicado' check (estado in ('borrador', 'publicado', 'archivado')),
+  orden integer not null default 1,
+  user_id uuid not null references auth.users(id),
+  fecha_creacion timestamptz not null default now(),
+  fecha_actualizacion timestamptz null
+);
+
+create table if not exists public.test_intentos (
+  id uuid primary key default gen_random_uuid(),
+  test_id integer not null references public.tests(id) on delete cascade,
+  curso_id integer not null references public.cursos(id) on delete cascade,
+  estudiante_id uuid not null references auth.users(id) on delete cascade,
+  email text null,
+  respuestas jsonb not null default '[]'::jsonb,
+  puntaje_obtenido numeric(8,2) not null default 0,
+  estado text not null default 'enviado' check (estado in ('enviado', 'corregido')),
+  fecha_envio timestamptz not null default now(),
+  fecha_correccion timestamptz null,
+  corregido_por uuid null references auth.users(id),
+  unique (test_id, estudiante_id)
+);
+
+-- Compatibilidad para proyectos donde las tablas de tests ya fueron creadas fuera del repositorio.
+alter table public.tests add column if not exists modulo_id uuid null references public.curso_modulos(id) on delete set null;
+alter table public.tests add column if not exists porcentaje_aprobacion numeric(5,2) not null default 60;
+alter table public.tests add column if not exists orden integer not null default 1;
+
+alter table public.guias add column if not exists modulo_id uuid null references public.curso_modulos(id) on delete set null;
+alter table public.guias add column if not exists orden integer not null default 1;
+alter table public.capsulas add column if not exists modulo_id uuid null references public.curso_modulos(id) on delete set null;
+alter table public.capsulas add column if not exists orden integer not null default 1;
+
+create table if not exists public.progreso_contenido (
+  id uuid primary key default gen_random_uuid(),
+  curso_id integer not null references public.cursos(id) on delete cascade,
+  estudiante_id uuid not null references auth.users(id) on delete cascade,
+  contenido_tipo text not null check (contenido_tipo in ('guia', 'capsula', 'test')),
+  contenido_id text not null,
+  estado text not null default 'completado' check (estado in ('completado')),
+  completado_en timestamptz not null default now(),
+  unique (estudiante_id, contenido_tipo, contenido_id)
+);
+
+alter table public.user_roles add column if not exists documento_identidad text null;
+alter table public.cursos add column if not exists vigencia_certificado_meses integer null;
+alter table public.cursos add column if not exists firma_certificado_nombre text null;
+alter table public.cursos add column if not exists firma_certificado_cargo text null;
+alter table public.cursos add column if not exists requiere_tareas_calificadas boolean not null default false;
+alter table public.cursos add column if not exists requiere_asistencia boolean not null default false;
+
+create table if not exists public.certificados (
+  id uuid primary key default gen_random_uuid(),
+  codigo text not null unique,
+  curso_id integer not null references public.cursos(id) on delete cascade,
+  estudiante_id uuid not null references auth.users(id) on delete cascade,
+  nombre_estudiante text not null,
+  documento_identidad text null,
+  nombre_curso text not null,
+  emitido_en timestamptz not null default now(),
+  vigente_hasta date null,
+  created_at timestamptz not null default now(),
+  unique (curso_id, estudiante_id)
+);
+
+alter table public.curso_modulos enable row level security;
+alter table public.tests enable row level security;
+alter table public.test_intentos enable row level security;
+alter table public.progreso_contenido enable row level security;
+alter table public.certificados enable row level security;
+grant select, insert, update, delete on public.curso_modulos, public.tests, public.test_intentos, public.progreso_contenido, public.certificados to authenticated;
+grant usage, select on sequence public.tests_id_seq to authenticated;
+
+create policy "Modulos visibles por curso" on public.curso_modulos for select to authenticated using (public.can_read_course(curso_id));
+create policy "Modulos gestionables" on public.curso_modulos for all to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id) and user_id = auth.uid());
+create policy "Tests visibles por curso" on public.tests for select to authenticated using (public.can_read_course(curso_id));
+create policy "Tests gestionables" on public.tests for all to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id) and user_id = auth.uid());
+create policy "Intentos visibles para participante" on public.test_intentos for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
+create policy "Estudiantes crean sus intentos" on public.test_intentos for insert to authenticated with check (estudiante_id = auth.uid() and public.can_read_course(curso_id));
+create policy "Gestores corrigen intentos" on public.test_intentos for update to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id));
+create policy "Progreso propio" on public.progreso_contenido for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
+create policy "Estudiantes registran su progreso" on public.progreso_contenido for insert to authenticated with check (estudiante_id = auth.uid() and public.can_read_course(curso_id));
+create policy "Estudiantes actualizan su progreso" on public.progreso_contenido for update to authenticated using (estudiante_id = auth.uid()) with check (estudiante_id = auth.uid());
+create policy "Certificados propios o gestionables" on public.certificados for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
+
+create or replace function public.emitir_certificado(p_curso_id integer)
+returns public.certificados
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_curso public.cursos%rowtype;
+  v_perfil public.user_roles%rowtype;
+  v_total integer;
+  v_completos integer;
+  v_tests integer;
+  v_aprobados integer;
+  v_tareas integer;
+  v_tareas_calificadas integer;
+  v_clases integer;
+  v_asistencias_validas integer;
+  v_certificado public.certificados%rowtype;
+begin
+  if auth.uid() is null or not public.can_read_course(p_curso_id) then raise exception 'No autorizado'; end if;
+  select * into v_certificado from public.certificados where curso_id = p_curso_id and estudiante_id = auth.uid();
+  if found then return v_certificado; end if;
+  select * into v_curso from public.cursos where id = p_curso_id;
+  select * into v_perfil from public.user_roles where user_id = auth.uid();
+  select count(*) into v_total from (
+    select 'guia' as tipo, id::text as id from public.guias where curso_id = p_curso_id
+    union all select 'capsula', id::text from public.capsulas where curso_id = p_curso_id
+  ) c;
+  select count(*) into v_completos from (
+    select 'guia'::text as tipo, id::text as id from public.guias where curso_id = p_curso_id
+    union all select 'capsula'::text, id::text from public.capsulas where curso_id = p_curso_id
+  ) c join public.progreso_contenido p on p.contenido_tipo = c.tipo and p.contenido_id = c.id
+  where p.curso_id = p_curso_id and p.estudiante_id = auth.uid() and p.estado = 'completado';
+  select count(*) into v_tests from public.tests where curso_id = p_curso_id and estado <> 'archivado';
+  select count(*) into v_aprobados from public.tests t join public.test_intentos i on i.test_id = t.id
+    where t.curso_id = p_curso_id and i.estudiante_id = auth.uid() and i.estado = 'corregido'
+      and i.puntaje_obtenido / nullif(t.puntaje_total, 0) * 100 >= t.porcentaje_aprobacion;
+  if v_total = 0 or v_completos < v_total or v_tests = 0 or v_aprobados < v_tests then raise exception 'Aún no se cumplen los requisitos de contenido y evaluación'; end if;
+  if v_curso.requiere_tareas_calificadas then
+    select count(*) into v_tareas from public.tareas where curso_id = p_curso_id;
+    select count(*) into v_tareas_calificadas from public.tareas t join public.entregas e on e.tarea_id = t.id
+      where t.curso_id = p_curso_id and e.estudiante_id = auth.uid() and e.calificacion is not null;
+    if v_tareas = 0 or v_tareas_calificadas < v_tareas then raise exception 'Aún faltan tareas calificadas'; end if;
+  end if;
+  if v_curso.requiere_asistencia then
+    select count(*) into v_clases from public.clases where curso_id = p_curso_id;
+    select count(*) into v_asistencias_validas from public.asistencias a join public.clases cl on cl.id = a.clase_id
+      where cl.curso_id = p_curso_id and a.estudiante_id = auth.uid() and a.estado in ('presente', 'tardanza');
+    if v_clases = 0 or v_asistencias_validas::numeric / v_clases * 100 < 75 then raise exception 'Aún no se cumple la asistencia requerida'; end if;
+  end if;
+  insert into public.certificados (codigo, curso_id, estudiante_id, nombre_estudiante, documento_identidad, nombre_curso, vigente_hasta)
+  values ('VIF-' || p_curso_id || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10)), p_curso_id, auth.uid(), coalesce(v_perfil.nombre, v_perfil.email), v_perfil.documento_identidad, v_curso.nombre,
+    case when v_curso.vigencia_certificado_meses is null then null else (current_date + (v_curso.vigencia_certificado_meses || ' months')::interval)::date end)
+  returning * into v_certificado;
+  return v_certificado;
+end;
+$$;
+grant execute on function public.emitir_certificado(integer) to authenticated;
+
+create or replace function public.validar_certificado(p_codigo text)
+returns table (codigo text, nombre_estudiante text, nombre_curso text, emitido_en timestamptz, vigente_hasta date, vigente boolean)
+language sql security definer set search_path = public
+as $$ select c.codigo, c.nombre_estudiante, c.nombre_curso, c.emitido_en, c.vigente_hasta, (c.vigente_hasta is null or c.vigente_hasta >= current_date) from public.certificados c where c.codigo = trim(p_codigo) $$;
+grant execute on function public.validar_certificado(text) to anon, authenticated;

@@ -5,6 +5,43 @@
   font-family: var(--font-sans);
 }
 
+/* Ruta de aprendizaje: amplía los componentes de curso existentes sin alterar sus vistas. */
+.module-manager {
+  align-items: end;
+  background: #fffafa;
+  border: 1px solid #f1cecb;
+  border-radius: 14px;
+  display: flex;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 18px;
+}
+
+.module-manager .field-group { flex: 1; margin: 0; }
+.module-manager .module-order-field { flex: 0 0 110px; }
+.learning-workspace { display: grid; gap: 20px; grid-template-columns: minmax(240px, 32%) 1fr; }
+.learning-outline, .learning-viewer { background: #fff; border: 1px solid #f1cecb; border-radius: 14px; padding: 18px; }
+.learning-outline h3 { color: var(--curso-color, #c62828); margin-top: 0; }
+.learning-module { border-top: 1px solid #f3dfdd; padding: 14px 0; }
+.learning-module:first-of-type { border-top: 0; padding-top: 0; }
+.learning-module-head { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
+.learning-module-head h4 { margin: 0; }
+.learning-item { align-items: center; background: transparent; border: 0; border-radius: 8px; color: #4d3432; cursor: pointer; display: flex; font: inherit; gap: 9px; margin-top: 6px; padding: 9px; text-align: left; width: 100%; }
+.learning-item:hover, .learning-item.active { background: #fff1ef; color: #a90c0a; }
+.learning-item.is-complete i { color: #23884b; }
+.learning-viewer-empty { align-items: center; color: #796562; display: flex; flex-direction: column; justify-content: center; min-height: 320px; text-align: center; }
+.learning-viewer .capsula-player { margin: 16px 0; }
+.learning-resource-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.learning-resource-actions button { margin: 0; }
+.course-card .viformar-progress { margin: 14px 0 2px; }
+.course-card .viformar-progress-track { flex: 1; }
+
+@media (max-width: 760px) {
+  .learning-workspace { grid-template-columns: 1fr; }
+  .module-manager { align-items: stretch; flex-direction: column; }
+  .module-manager .module-order-field { flex-basis: auto; }
+}
+
 :root {
   --font-sans: "Georama", "Noto Sans", sans-serif;
 }

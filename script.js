@@ -241,8 +241,15 @@ function obtenerResumenProgresoCurso(curso) {
     const intento = testIntentos.find(i => String(i.test_id) === String(test.id) && (!currentUserId || i.estudiante_id === currentUserId));
     return intentoApruebaTest(intento, test);
   }).length;
-  const videosCompletados = Math.min(videosTotal, Number(localStorage.getItem(`viformar:${currentUserId}:${curso.id}:videos`) || 0));
-  const documentosCompletados = Math.min(documentosTotal, Number(localStorage.getItem(`viformar:${currentUserId}:${curso.id}:documentos`) || 0));
+  const completado = (tipo, id) => progresoContenido.some(item =>
+    item.curso_id === curso.id && item.estudiante_id === currentUserId &&
+    item.contenido_tipo === tipo && String(item.contenido_id) === String(id) && item.estado === 'completado'
+  );
+  const videosCompletados = capsulas.filter(c => c.curso_id === curso.id && c.tipo === 'video' && completado('capsula', c.id)).length;
+  const documentosCompletados = [
+    ...guias.filter(g => g.curso_id === curso.id).map(g => ({ tipo: 'guia', id: g.id })),
+    ...capsulas.filter(c => c.curso_id === curso.id && c.tipo !== 'video').map(c => ({ tipo: 'capsula', id: c.id }))
+  ].filter(item => completado(item.tipo, item.id)).length;
   const porcentaje = Math.min(100, Math.round(
     (videosTotal ? (videosCompletados / videosTotal) * 50 : 0) +
     (documentosTotal ? (documentosCompletados / documentosTotal) * 20 : 0) +
@@ -624,6 +631,11 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const codigoValidacion = new URLSearchParams(window.location.search).get('validar-certificado');
+  if (codigoValidacion) {
+    await mostrarValidacionCertificado(codigoValidacion);
+    return;
+  }
   await initAuth();
   const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
   if (mobileSidebarToggle) {
@@ -677,6 +689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnAsistencia')?.addEventListener('click', () => mostrarSeccionCurso('asistencia'));
     document.getElementById('btnTareas')?.addEventListener('click', () => mostrarSeccionCurso('tareas'));
     document.getElementById('btnCapsulas')?.addEventListener('click', () => mostrarSeccionCurso('capsulas'));
+    document.getElementById('agregarModulo')?.addEventListener('click', agregarModulo);
     document.getElementById('btnEditarObjetivos')?.addEventListener('click', editarObjetivos);
     document.getElementById('btnEditarRequisitos')?.addEventListener('click', editarRequisitos);
     document.getElementById('agregarGuia')?.addEventListener('click', agregarGuia);
@@ -730,6 +743,9 @@ let clases = [];
 let asistencias = [];
 let estudiantes = [];
 let avisos = [];
+let modulos = [];
+let progresoContenido = [];
+let contenidoSeleccionado = null;
 
 const secciones = {
   cursos: document.getElementById('cursos-section'),
@@ -820,7 +836,7 @@ function mostrarSeccion(seccion) {
 }
 
 function mostrarSeccionCurso(seccion) {
-  if (currentUserRole === ROLES.STUDENT && ['participantes', 'asistencia', 'tareas', 'capsulas'].includes(seccion)) {
+  if (currentUserRole === ROLES.STUDENT && ['participantes', 'asistencia', 'tareas'].includes(seccion)) {
     seccion = 'presentacion';
   }
   document.querySelectorAll('.curso-nav button').forEach(btn => {
@@ -835,6 +851,9 @@ function mostrarSeccionCurso(seccion) {
 
 async function activarPestanaCurso(seccion) {
   mostrarSeccionCurso(seccion);
+  if (seccion === 'contenido') {
+    await renderizarAprendizaje();
+  }
   if (seccion === 'clasesVivo') {
     await renderizarReunionesCurso();
   }
@@ -853,6 +872,8 @@ async function cargarDatos(userRole) {
     tests = [];
     testIntentos = [];
     capsulas = [];
+    modulos = [];
+    progresoContenido = [];
     let shouldLoadData = true;
     if (userRole === ROLES.STUDENT) {
       const { data: inscripciones, error: inscripcionesError } = await supabase
@@ -901,6 +922,18 @@ async function cargarDatos(userRole) {
         .select('*')
         .in('curso_id', cursosIds);
       if (!capsulasError) capsulas = capsulasData || [];
+      const { data: modulosData, error: modulosError } = await supabase
+        .from('curso_modulos')
+        .select('*')
+        .in('curso_id', cursosIds)
+        .order('orden', { ascending: true });
+      if (!modulosError) modulos = modulosData || [];
+      const { data: progresoData, error: progresoError } = await supabase
+        .from('progreso_contenido')
+        .select('*')
+        .eq('estudiante_id', user.id)
+        .in('curso_id', cursosIds);
+      if (!progresoError) progresoContenido = progresoData || [];
     }
     renderizarCursos();
   } catch (error) {
@@ -912,6 +945,8 @@ async function cargarDatos(userRole) {
     tests = [];
     testIntentos = [];
     capsulas = [];
+    modulos = [];
+    progresoContenido = [];
     renderizarCursos();
   }
 }
@@ -971,6 +1006,11 @@ async function actualizarCurso(id) {
   const nombre = document.getElementById('editCursoNombre').value.trim();
   const descripcion = document.getElementById('editCursoDescripcion').value.trim();
   const color = document.getElementById('editCursoColor').value;
+  const vigenciaCertificadoMeses = document.getElementById('editCursoVigenciaCertificado')?.value || null;
+  const requiereTareasCalificadas = document.getElementById('editCursoRequiereTareas')?.checked || false;
+  const requiereAsistencia = document.getElementById('editCursoRequiereAsistencia')?.checked || false;
+  const firmaCertificadoNombre = document.getElementById('editCursoFirmaNombre')?.value.trim() || null;
+  const firmaCertificadoCargo = document.getElementById('editCursoFirmaCargo')?.value.trim() || null;
   if (!nombre) {
     mostrarToast('El nombre del curso es obligatorio', 'warning');
     return;
@@ -983,7 +1023,7 @@ async function actualizarCurso(id) {
     }
     const { data, error } = await supabase
       .from('cursos')
-      .update({ nombre, descripcion, color })
+      .update({ nombre, descripcion, color, vigencia_certificado_meses: vigenciaCertificadoMeses ? Number(vigenciaCertificadoMeses) : null, requiere_tareas_calificadas: requiereTareasCalificadas, requiere_asistencia: requiereAsistencia, firma_certificado_nombre: firmaCertificadoNombre, firma_certificado_cargo: firmaCertificadoCargo })
       .eq('id', id)
       .select();
     if (error) throw error;
@@ -1082,6 +1122,7 @@ async function agregarGuia() {
   const titulo = document.getElementById('guiaTitulo').value.trim();
   const contenido = document.getElementById('guiaContenido').value.trim();
   const visibilidad = document.getElementById('guiaVisibilidad').value;
+  const moduloId = document.getElementById('guiaModulo')?.value || null;
   if (!titulo || !contenido) {
     mostrarToast('Todos los campos son obligatorios', 'warning');
     return;
@@ -1097,6 +1138,7 @@ async function agregarGuia() {
       .insert([
         {
           curso_id: cursoActual.id,
+          modulo_id: moduloId,
           titulo,
           contenido,
           visibilidad,
@@ -1593,6 +1635,8 @@ async function agregarTest() {
   const titulo = document.getElementById('testTitulo').value.trim();
   const descripcion = document.getElementById('testDescripcion').value.trim();
   const fechaInput = document.getElementById('testFecha').value;
+  const moduloId = document.getElementById('testModulo')?.value || null;
+  const porcentajeAprobacion = Math.min(100, Math.max(1, Number(document.getElementById('testPorcentajeAprobacion')?.value || 60)));
   const preguntas = normalizarPreguntasTest(leerPreguntasBuilder('test'));
   const puntajeTotal = calcularPuntajePreguntas(preguntas);
   const errorPreguntas = validarPreguntasTest(preguntas);
@@ -1614,12 +1658,14 @@ async function agregarTest() {
       .from('tests')
       .insert([{
         curso_id: cursoActual.id,
+        modulo_id: moduloId,
         titulo,
         descripcion,
         fecha_limite: chileDateTimeLocalToISO(fechaInput),
         puntaje_total: puntajeTotal,
         preguntas,
         estado: 'publicado',
+        porcentaje_aprobacion: porcentajeAprobacion,
         user_id: user.id
       }])
       .select();
@@ -1784,6 +1830,7 @@ async function agregarCapsula() {
   const url = document.getElementById('capsulaUrl').value.trim();
   const descripcion = document.getElementById('capsulaDescripcion').value.trim();
   const duracion = parseInt(document.getElementById('capsulaDuracion').value) || 0;
+  const moduloId = document.getElementById('capsulaModulo')?.value || null;
   if (!titulo || !url) {
     mostrarToast('Los campos título y URL son obligatorios', 'warning');
     return;
@@ -1805,6 +1852,7 @@ async function agregarCapsula() {
       .insert([
         {
           curso_id: cursoActual.id,
+          modulo_id: moduloId,
           titulo,
           tipo,
           url,
@@ -2034,6 +2082,7 @@ function renderizarCursos() {
     const puedeEliminar = esAdmin || (esProfesor && esPropietario);
     const esCursoActivo = cursoActual && cursoActual.id === curso.id;
     const colorCurso = curso.color || '#c62828';
+    const progreso = obtenerResumenProgresoCurso(curso);
     const headerStyle = `
       --course-color: ${colorCurso};
     `;
@@ -2050,6 +2099,10 @@ function renderizarCursos() {
             </div>
           </div>
           ${curso.descripcion ? `<p class="course-description">${curso.descripcion.substring(0, 96)}${curso.descripcion.length > 96 ? '...' : ''}</p>` : '<p class="course-description">Sin descripción disponible.</p>'}
+          <div class="course-progress-block">
+            <span class="badge badge-owner">${progreso.estado}</span>
+            ${renderizarBarraProgreso(progreso.porcentaje)}
+          </div>
           <div class="course-stats">
             <span><strong>${totalGuias}</strong><small>Guías</small></span>
             <span><strong>${totalTareas}</strong><small>Tareas</small></span>
@@ -2642,6 +2695,9 @@ async function enviarTest(id) {
     if (error) throw error;
     if (data && data.length > 0) {
       testIntentos.unshift(data[0]);
+      if (intentoApruebaTest(data[0], test)) {
+        await marcarContenidoCompletado('test', test.id);
+      }
       cerrarModal();
       await renderizarTests();
       mostrarToast(requiereCorreccion ? 'Test enviado para corrección' : 'Test enviado y corregido automáticamente', 'success');
@@ -2804,6 +2860,9 @@ async function guardarCorreccionTest(intentoId) {
     if (data && data.length > 0) {
       const index = testIntentos.findIndex(item => String(item.id) === String(intentoId));
       if (index !== -1) testIntentos[index] = data[0];
+      if (intentoApruebaTest(data[0], test)) {
+        await marcarContenidoCompletado('test', test.id);
+      }
       cerrarModal();
       await renderizarTests();
       mostrarToast('Corrección guardada correctamente', 'success');
@@ -2921,6 +2980,107 @@ function renderizarCapsulas() {
   lista.innerHTML = contenidoHTML;
 }
 
+async function mostrarValidacionCertificado(codigo) {
+  const { data, error } = await supabase.rpc('validar_certificado', { p_codigo: codigo });
+  const certificado = data?.[0];
+  const valido = !error && certificado && certificado.vigente;
+  document.body.innerHTML = `<main class="main-content" style="margin:0 auto;max-width:760px;padding:60px 24px"><section class="certificate-panel ${valido ? 'is-ready' : ''}"><div class="certificate-summary"><div class="certificate-icon"><i class="fas ${valido ? 'fa-certificate' : 'fa-circle-xmark'}"></i></div><div><h1>${valido ? 'Certificado válido' : 'Certificado no válido'}</h1><p>${valido ? 'La emisión fue verificada en Viformar.' : 'No encontramos un certificado vigente con este código.'}</p></div></div>${valido ? `<div class="certificate-preview"><p><strong>Estudiante:</strong> ${escaparHtml(certificado.nombre_estudiante)}</p><p><strong>Curso:</strong> ${escaparHtml(certificado.nombre_curso)}</p><p><strong>Emitido:</strong> ${toChileDateTimeString(certificado.emitido_en, false)}</p><p><strong>Código:</strong> ${escaparHtml(certificado.codigo)}</p></div>` : ''}</section></main>`;
+}
+
+function contenidoEstaCompletado(tipo, id) {
+  return progresoContenido.some(item => item.estudiante_id === currentUserId &&
+    item.contenido_tipo === tipo && String(item.contenido_id) === String(id) && item.estado === 'completado');
+}
+
+function obtenerItemsModulo(moduloId) {
+  const pertenece = item => String(item.modulo_id || '') === String(moduloId || '');
+  return [
+    ...guias.filter(pertenece).map(item => ({ ...item, tipoContenido: 'guia', etiqueta: 'Documento', icono: 'fa-file-alt' })),
+    ...capsulas.filter(pertenece).map(item => ({ ...item, tipoContenido: 'capsula', etiqueta: item.tipo === 'video' ? 'Video' : 'Recurso', icono: item.tipo === 'video' ? 'fa-video' : 'fa-file' })),
+    ...tests.filter(item => pertenece(item) && item.estado !== 'archivado').map(item => ({ ...item, tipoContenido: 'test', etiqueta: 'Evaluación', icono: 'fa-clipboard-list' }))
+  ].sort((a, b) => Number(a.orden || 0) - Number(b.orden || 0) || String(a.titulo).localeCompare(String(b.titulo)));
+}
+
+function renderizarSelectorModulo(selectId, seleccionado = '') {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  select.innerHTML = `<option value="">Sin módulo / contenido general</option>${modulos
+    .filter(item => item.curso_id === cursoActual?.id)
+    .map(item => `<option value="${item.id}" ${String(item.id) === String(seleccionado) ? 'selected' : ''}>${escaparHtml(item.titulo)}</option>`).join('')}`;
+}
+
+async function agregarModulo() {
+  if (!cursoActual || !puedeCrearContenido()) return;
+  const titulo = document.getElementById('moduloTitulo')?.value.trim();
+  const orden = Number(document.getElementById('moduloOrden')?.value || modulos.length + 1);
+  if (!titulo) return mostrarToast('Ingresa el nombre del módulo', 'warning');
+  const { data, error } = await supabase.from('curso_modulos').insert([{ curso_id: cursoActual.id, titulo, orden, user_id: currentUserId }]).select();
+  if (error) return mostrarToast('No se pudo crear el módulo: ' + error.message, 'error');
+  modulos.push(data[0]);
+  document.getElementById('moduloTitulo').value = '';
+  await renderizarAprendizaje();
+  renderizarSelectorModulo('guiaModulo'); renderizarSelectorModulo('capsulaModulo'); renderizarSelectorModulo('testModulo');
+  mostrarToast('Módulo creado', 'success');
+}
+
+async function eliminarModulo(id) {
+  if (!confirm('El módulo se eliminará; su contenido seguirá disponible sin módulo.')) return;
+  const { error } = await supabase.from('curso_modulos').delete().eq('id', id);
+  if (error) return mostrarToast('No se pudo eliminar el módulo: ' + error.message, 'error');
+  modulos = modulos.filter(item => String(item.id) !== String(id));
+  await renderizarAprendizaje();
+}
+
+async function seleccionarContenidoCurso(tipo, id) {
+  const coleccion = tipo === 'guia' ? guias : tipo === 'capsula' ? capsulas : tests;
+  const contenido = coleccion.find(item => String(item.id) === String(id));
+  if (!contenido) return;
+  contenidoSeleccionado = { tipo, id };
+  await renderizarAprendizaje();
+}
+
+async function marcarContenidoCompletado(tipo, id) {
+  if (!cursoActual || !currentUserId) return;
+  const registro = { curso_id: cursoActual.id, estudiante_id: currentUserId, contenido_tipo: tipo, contenido_id: String(id), estado: 'completado', completado_en: getChileNowISO() };
+  const { data, error } = await supabase.from('progreso_contenido').upsert(registro, { onConflict: 'estudiante_id,contenido_tipo,contenido_id' }).select();
+  if (error) return mostrarToast('No se pudo guardar el avance: ' + error.message, 'error');
+  progresoContenido = progresoContenido.filter(item => !(item.estudiante_id === currentUserId && item.contenido_tipo === tipo && String(item.contenido_id) === String(id)));
+  progresoContenido.push(data[0]);
+  renderizarCursos();
+  renderizarPresentacionCurso();
+  await renderizarAprendizaje();
+  mostrarToast('Contenido marcado como completado', 'success');
+}
+
+async function renderizarAprendizaje() {
+  const contenedor = document.getElementById('aprendizaje-content');
+  if (!contenedor || !cursoActual) return;
+  const modulosCurso = modulos.filter(item => item.curso_id === cursoActual.id).sort((a, b) => Number(a.orden) - Number(b.orden));
+  const grupos = [...modulosCurso, { id: '', titulo: 'Contenido general', orden: 999999, esGeneral: true }]
+    .filter(modulo => modulo.esGeneral ? obtenerItemsModulo('').length > 0 || modulosCurso.length === 0 : true);
+  if (!contenidoSeleccionado) {
+    const primero = grupos.flatMap(modulo => obtenerItemsModulo(modulo.id))[0];
+    if (primero) contenidoSeleccionado = { tipo: primero.tipoContenido, id: primero.id };
+  }
+  const seleccionado = contenidoSeleccionado && (contenidoSeleccionado.tipo === 'guia' ? guias : contenidoSeleccionado.tipo === 'capsula' ? capsulas : tests)
+    .find(item => String(item.id) === String(contenidoSeleccionado.id));
+  const esquema = grupos.map(modulo => {
+    const items = obtenerItemsModulo(modulo.id);
+    return `<div class="learning-module"><div class="learning-module-head"><h4>${escaparHtml(modulo.titulo)}</h4>${!modulo.esGeneral && !esEstudianteActual() ? `<button class="delete-btn icon-btn" onclick="eliminarModulo('${modulo.id}')" title="Eliminar módulo"><i class="fas fa-trash"></i></button>` : ''}</div>${items.length ? items.map(item => `<button class="learning-item ${contenidoSeleccionado?.tipo === item.tipoContenido && String(contenidoSeleccionado?.id) === String(item.id) ? 'active' : ''} ${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? 'is-complete' : ''}" onclick="seleccionarContenidoCurso('${item.tipoContenido}', '${item.id}')"><i class="fas ${item.icono}"></i><span>${escaparHtml(item.titulo)}</span>${item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id) ? '<i class="fas fa-check-circle"></i>' : ''}</button>`).join('') : '<p class="text-muted">Sin contenidos.</p>'}</div>`;
+  }).join('');
+  let visor = '<div class="learning-viewer-empty"><i class="fas fa-book-open fa-2x"></i><p>Selecciona un contenido para comenzar.</p></div>';
+  if (seleccionado) {
+    const tipo = contenidoSeleccionado.tipo;
+    const completado = tipo !== 'test' && contenidoEstaCompletado(tipo, seleccionado.id);
+    const cuerpo = tipo === 'capsula' ? `${renderizarReproductorCapsula(seleccionado)}<p>${escaparHtml(seleccionado.descripcion || '')}</p>${normalizarUrlRecurso(seleccionado.url) ? `<a class="resource-link" target="_blank" rel="noopener" href="${escaparHtml(normalizarUrlRecurso(seleccionado.url))}">Abrir recurso</a>` : ''}`
+      : tipo === 'guia' ? `<div class="markdown-preview">${previsualizarMarkdown(seleccionado.contenido)}</div>${(seleccionado.archivos || []).map(archivo => `<a class="resource-link" target="_blank" href="${escaparHtml(archivo.url)}">${escaparHtml(archivo.nombre)}</a>`).join('')}`
+      : `<p>${escaparHtml(seleccionado.descripcion || '')}</p><p>Nota mínima de aprobación: ${obtenerPorcentajeAprobacion(seleccionado)}%.</p>`;
+    visor = `<div><span class="badge badge-owner">${tipo === 'test' ? 'Evaluación' : completado ? 'Completado' : 'Pendiente'}</span><h3>${escaparHtml(seleccionado.titulo)}</h3>${cuerpo}<div class="learning-resource-actions">${tipo === 'test' ? `<button class="btn-primary" onclick="resolverTest('${seleccionado.id}')"><i class="fas fa-clipboard-check"></i> Resolver evaluación</button>` : `<button class="btn-primary" ${completado ? 'disabled' : ''} onclick="marcarContenidoCompletado('${tipo}', '${seleccionado.id}')"><i class="fas fa-check"></i> ${completado ? 'Contenido completado' : 'Marcar como completado'}</button>`}</div></div>`;
+  }
+  contenedor.innerHTML = `<aside class="learning-outline"><h3>Contenido</h3>${esquema}</aside><article class="learning-viewer">${visor}</article>`;
+  renderizarSelectorModulo('guiaModulo'); renderizarSelectorModulo('capsulaModulo'); renderizarSelectorModulo('testModulo');
+}
+
 async function entrarCurso(id) {
   cursoActual = cursos.find(c => c.id === id);
   if (!cursoActual) return;
@@ -2955,6 +3115,7 @@ async function entrarCurso(id) {
   renderizarCapsulas();
   renderizarAsistencia();
   renderizarPresentacionCurso();
+  await renderizarAprendizaje();
   await renderizarCertificado();
 }
 
@@ -3049,6 +3210,17 @@ async function editarCurso(id) {
               <label for="editCursoColor">Color</label>
               <input type="color" id="editCursoColor" value="${curso.color || '#c62828'}">
             </div>
+            <fieldset class="form-group">
+              <legend>Certificación</legend>
+              <label for="editCursoVigenciaCertificado">Vigencia en meses (opcional)</label>
+              <input type="number" id="editCursoVigenciaCertificado" min="1" value="${curso.vigencia_certificado_meses || ''}">
+              <label for="editCursoFirmaNombre">Nombre de firma</label>
+              <input type="text" id="editCursoFirmaNombre" value="${escaparHtml(curso.firma_certificado_nombre || '')}" placeholder="Responsable de certificación">
+              <label for="editCursoFirmaCargo">Cargo de firma</label>
+              <input type="text" id="editCursoFirmaCargo" value="${escaparHtml(curso.firma_certificado_cargo || '')}" placeholder="Ej.: Dirección académica">
+              <label><input type="checkbox" id="editCursoRequiereTareas" ${curso.requiere_tareas_calificadas ? 'checked' : ''}> Exigir tareas calificadas además del avance</label>
+              <label><input type="checkbox" id="editCursoRequiereAsistencia" ${curso.requiere_asistencia ? 'checked' : ''}> Exigir 75% de asistencia además del avance</label>
+            </fieldset>
             <button onclick="actualizarCurso(${id})"><i class="fas fa-save"></i> Actualizar Curso</button>
           </div>
         </div>
@@ -4050,13 +4222,14 @@ function renderizarParticipantes(estudiantes = [], profesores = [], asistentes =
   `;
   todosLosParticipantes.forEach(participante => {
     const puedeEliminar = verificarPermiso('delete', 'inscripciones');
-    const accionesHTML = puedeEliminar ? `
+    const accionesHTML = `${participante.rol === 'Estudiante' && puedeAdministrarParticipantes() ? `
+      <button onclick="verProgresoEstudiante('${participante.user_id}')" class="btn-secondary icon-btn" title="Ver avance"><i class="fas fa-chart-line"></i></button>` : ''}${puedeEliminar ? `
       <div class="item-actions-table">
         <button onclick="eliminarInscripcion('${cursoActual.id}', '${participante.user_id}')" class="btn-delete" title="Eliminar del curso">
           <i class="fas fa-user-minus"></i>
         </button>
       </div>
-    ` : '<span class="text-muted">N/A</span>';
+    ` : ''}` || '<span class="text-muted">N/A</span>';
     const creadorBadge = participante.rol === 'Profesor' && participante.user_id === cursoActual?.user_id
       ? '<span class="badge badge-owner" title="Creador del curso">Creador</span>'
       : '';
@@ -4081,6 +4254,21 @@ function renderizarParticipantes(estudiantes = [], profesores = [], asistentes =
   });
   participantesHTML += '</div>';
   listaParticipantes.innerHTML = participantesHTML;
+}
+
+async function verProgresoEstudiante(estudianteId) {
+  if (!cursoActual || !puedeAdministrarParticipantes()) return;
+  const [{ data: avances, error: avancesError }, { data: intentos, error: intentosError }] = await Promise.all([
+    supabase.from('progreso_contenido').select('contenido_tipo, contenido_id').eq('curso_id', cursoActual.id).eq('estudiante_id', estudianteId).eq('estado', 'completado'),
+    supabase.from('test_intentos').select('test_id, puntaje_obtenido, estado').eq('curso_id', cursoActual.id).eq('estudiante_id', estudianteId)
+  ]);
+  if (avancesError || intentosError) return mostrarToast('No se pudo cargar el progreso individual', 'error');
+  const contenidos = [...guias.filter(item => item.curso_id === cursoActual.id).map(item => ({ tipo: 'guia', id: item.id })), ...capsulas.filter(item => item.curso_id === cursoActual.id).map(item => ({ tipo: 'capsula', id: item.id }))];
+  const completos = contenidos.filter(item => (avances || []).some(avance => avance.contenido_tipo === item.tipo && String(avance.contenido_id) === String(item.id))).length;
+  const evaluaciones = tests.filter(item => item.curso_id === cursoActual.id && item.estado !== 'archivado');
+  const aprobadas = evaluaciones.filter(test => intentoApruebaTest((intentos || []).find(item => String(item.test_id) === String(test.id)), test)).length;
+  modalContent.innerHTML = `<div class="auth-modal"><h2><i class="fas fa-chart-line"></i> Avance individual</h2><p><strong>Contenidos:</strong> ${completos}/${contenidos.length}</p><p><strong>Evaluaciones aprobadas:</strong> ${aprobadas}/${evaluaciones.length}</p><p>${contenidos.length && evaluaciones.length && completos === contenidos.length && aprobadas === evaluaciones.length ? 'Curso completado.' : 'Curso en progreso.'}</p><button class="btn-primary" onclick="cerrarModal()">Cerrar</button></div>`;
+  modal.style.display = 'block';
 }
 
 function puedeDesmatricular(estudianteId) {
@@ -4723,6 +4911,12 @@ async function obtenerPerfilActual() {
 
 async function obtenerRequisitosCertificado(curso) {
   const requisitos = {
+    contenidosTotal: 0,
+    contenidosCompletados: 0,
+    contenidoCumplido: false,
+    evaluacionesTotal: 0,
+    evaluacionesAprobadas: 0,
+    evaluacionCumplida: false,
     tareasTotal: 0,
     tareasCalificadas: 0,
     notasCompletas: false,
@@ -4734,6 +4928,17 @@ async function obtenerRequisitosCertificado(curso) {
   };
   if (!curso || !currentUserId) return requisitos;
   try {
+    const contenidos = [
+      ...guias.filter(item => item.curso_id === curso.id).map(item => ({ tipo: 'guia', id: item.id })),
+      ...capsulas.filter(item => item.curso_id === curso.id).map(item => ({ tipo: 'capsula', id: item.id }))
+    ];
+    requisitos.contenidosTotal = contenidos.length;
+    requisitos.contenidosCompletados = contenidos.filter(item => contenidoEstaCompletado(item.tipo, item.id)).length;
+    requisitos.contenidoCumplido = requisitos.contenidosTotal > 0 && requisitos.contenidosCompletados === requisitos.contenidosTotal;
+    const evaluaciones = tests.filter(item => item.curso_id === curso.id && item.estado !== 'archivado');
+    requisitos.evaluacionesTotal = evaluaciones.length;
+    requisitos.evaluacionesAprobadas = evaluaciones.filter(test => intentoApruebaTest(testIntentos.find(intento => String(intento.test_id) === String(test.id) && intento.estudiante_id === currentUserId), test)).length;
+    requisitos.evaluacionCumplida = requisitos.evaluacionesTotal > 0 && requisitos.evaluacionesAprobadas === requisitos.evaluacionesTotal;
     const tareasCurso = tareas.filter(tarea => tarea.curso_id === curso.id);
     requisitos.tareasTotal = tareasCurso.length;
     if (tareasCurso.length > 0) {
@@ -4769,7 +4974,10 @@ async function obtenerRequisitosCertificado(curso) {
       requisitos.porcentajeAsistencia = Math.round((requisitos.asistenciasValidas / requisitos.clasesTotal) * 100);
       requisitos.asistenciaCumplida = requisitos.porcentajeAsistencia >= 75;
     }
-    requisitos.certificadoDisponible = requisitos.notasCompletas && requisitos.asistenciaCumplida;
+    const exigeTareas = curso.requiere_tareas_calificadas === true;
+    const exigeAsistencia = curso.requiere_asistencia === true;
+    requisitos.certificadoDisponible = requisitos.contenidoCumplido && requisitos.evaluacionCumplida &&
+      (!exigeTareas || requisitos.notasCompletas) && (!exigeAsistencia || requisitos.asistenciaCumplida);
   } catch (error) {
     console.error('Error al calcular requisitos de certificado:', error);
   }
@@ -4794,17 +5002,23 @@ async function renderizarCertificado() {
           <h3>${requisitos.certificadoDisponible ? 'Certificado disponible' : 'Certificado pendiente'}</h3>
           <p>${requisitos.certificadoDisponible
       ? 'Ya cumples los requisitos para descargar tu certificado.'
-      : 'Debes tener nota en todas tus tareas y una asistencia mínima del 75% para obtener el certificado.'}</p>
+            : 'Completa todos los contenidos y aprueba las evaluaciones requeridas para obtener el certificado.'}</p>
         </div>
       </div>
       ${renderizarBarraProgreso(progreso.porcentaje)}
       <div class="certificate-requirements">
-        <span class="${requisitos.notasCompletas ? 'ok' : ''}">
+        <span class="${requisitos.contenidoCumplido ? 'ok' : ''}">
+          <i class="fas fa-check"></i> Contenidos completados: ${requisitos.contenidosCompletados}/${requisitos.contenidosTotal}
+        </span>
+        <span class="${requisitos.evaluacionCumplida ? 'ok' : ''}">
+          <i class="fas fa-check"></i> Evaluaciones aprobadas: ${requisitos.evaluacionesAprobadas}/${requisitos.evaluacionesTotal}
+        </span>
+        ${cursoActual.requiere_tareas_calificadas ? `<span class="${requisitos.notasCompletas ? 'ok' : ''}">
           <i class="fas fa-check"></i> Tareas calificadas: ${requisitos.tareasCalificadas}/${requisitos.tareasTotal}
-        </span>
-        <span class="${requisitos.asistenciaCumplida ? 'ok' : ''}">
+        </span>` : ''}
+        ${cursoActual.requiere_asistencia ? `<span class="${requisitos.asistenciaCumplida ? 'ok' : ''}">
           <i class="fas fa-check"></i> Asistencia: ${requisitos.porcentajeAsistencia}% / 75%
-        </span>
+        </span>` : ''}
       </div>
       <div class="certificate-preview">
         <p><strong>Estudiante:</strong> ${escaparHtml(nombre)}</p>
@@ -4822,14 +5036,20 @@ async function descargarCertificado() {
   if (!cursoActual) return;
   const requisitos = await obtenerRequisitosCertificado(cursoActual);
   if (!requisitos.certificadoDisponible) {
-    mostrarToast('El certificado requiere todas las tareas calificadas y asistencia mínima del 75%.', 'warning');
+    mostrarToast('Aún no cumples los requisitos de contenidos y evaluación del certificado.', 'warning');
     return;
   }
-  const perfil = await obtenerPerfilActual();
-  const nombre = perfil?.nombre || 'Estudiante';
-  const fechaEmision = toChileDateTimeString(new Date().toISOString(), false);
-  const codigo = `VIF-${cursoActual.id}-${String(currentUserId || '').slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-  const qrData = encodeURIComponent(`https://viformar.com/validar-certificado?codigo=${codigo}`);
+  const { data: certificado, error: certificadoError } = await supabase.rpc('emitir_certificado', { p_curso_id: cursoActual.id });
+  if (certificadoError) {
+    mostrarToast('No se pudo emitir el certificado: ' + certificadoError.message, 'error');
+    return;
+  }
+  const nombre = certificado.nombre_estudiante;
+  const fechaEmision = toChileDateTimeString(certificado.emitido_en, false);
+  const codigo = certificado.codigo;
+  const qrData = encodeURIComponent(`${window.location.origin}${window.location.pathname}?validar-certificado=${codigo}`);
+  const firmaNombre = cursoActual.firma_certificado_nombre || 'Viformar';
+  const firmaCargo = cursoActual.firma_certificado_cargo || 'Certificación académica';
   const ventana = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
   if (!ventana) {
     mostrarToast('Permite ventanas emergentes para generar el certificado.', 'warning');
@@ -4862,14 +5082,15 @@ async function descargarCertificado() {
           <h1>Certificado de aprobación</h1>
           <p class="lead">Viformar certifica que</p>
           <p class="name">${escaparHtml(nombre)}</p>
-          <p class="lead">aprobó satisfactoriamente el curso <strong>${escaparHtml(cursoActual.nombre)}</strong>, cumpliendo con tareas calificadas y asistencia mínima requerida.</p>
+          <p class="lead">aprobó satisfactoriamente el curso <strong>${escaparHtml(cursoActual.nombre)}</strong>, cumpliendo los contenidos y evaluaciones requeridos.</p>
           <div class="meta">
             <span><strong>Fecha de emisión:</strong> ${escaparHtml(fechaEmision)}</span>
-            <span><strong>Asistencia:</strong> ${requisitos.porcentajeAsistencia}%</span>
+            ${certificado.documento_identidad ? `<span><strong>Documento:</strong> ${escaparHtml(certificado.documento_identidad)}</span>` : ''}
+            ${certificado.vigente_hasta ? `<span><strong>Vigencia:</strong> ${escaparHtml(certificado.vigente_hasta)}</span>` : ''}
             <span><strong>Código de validación:</strong> ${escaparHtml(codigo)}</span>
           </div>
           <div class="footer">
-            <div class="signature">Firma digital Viformar</div>
+            <div class="signature">${escaparHtml(firmaNombre)}<br><small>${escaparHtml(firmaCargo)}</small></div>
             <div class="qr">
               <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${qrData}" alt="Código QR de validación">
               <div>Validación QR</div>
@@ -7656,3 +7877,7 @@ window.eliminarReunion = eliminarReunion;
 window.unirseReunion = unirseReunion;
 window.generarEnlaceReunion = generarEnlaceReunion;
 window.descargarCertificado = descargarCertificado;
+window.seleccionarContenidoCurso = seleccionarContenidoCurso;
+window.marcarContenidoCompletado = marcarContenidoCompletado;
+window.eliminarModulo = eliminarModulo;
+window.verProgresoEstudiante = verProgresoEstudiante;
