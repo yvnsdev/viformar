@@ -7,7 +7,6 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 const ROLES = {
   STUDENT: 'student',
   TEACHER: 'teacher',
-  ASSISTANT: 'assistant',
   ADMIN: 'admin'
 };
 
@@ -29,13 +28,6 @@ const PERMISOS = {
       return accionesPermitidas.includes(accion) && recursosPermitidos.includes(recurso);
     }
   },
-  assistant: {
-    puede: (accion, recurso) => {
-      const accionesPermitidas = ['create', 'read', 'update'];
-      const recursosPermitidos = ['guias', 'tareas', 'capsulas', 'reuniones', 'avisos'];
-      return accionesPermitidas.includes(accion) && recursosPermitidos.includes(recurso);
-    }
-  },
   student: {
     puede: (accion, recurso) => accion === 'read'
   }
@@ -44,6 +36,7 @@ const PERMISOS = {
 let currentUserId = null;
 let currentUserRole = null;
 let userRoleSubscription = null;
+let rolesUsuarioPorCurso = new Map();
 let claseEditandoId = null;
 
 function esRolAdmin(role = currentUserRole) {
@@ -60,6 +53,28 @@ function verificarPermiso(accion, recurso) {
 
 function esEstudianteActual() {
   return currentUserRole === ROLES.STUDENT;
+}
+
+function puedeGestionarCurso(curso = cursoActual) {
+  if (!curso) return false;
+  if (esRolAdmin()) return true;
+  return currentUserRole === ROLES.TEACHER && (
+    curso.user_id === currentUserId || rolesUsuarioPorCurso.get(String(curso.id)) === ROLES.TEACHER
+  );
+}
+
+function aplicarPermisosCurso() {
+  const puedeGestionar = puedeGestionarCurso();
+  document.querySelectorAll('#curso-detalle-section .admin-course-tab').forEach(elemento => {
+    elemento.style.display = puedeGestionar ? '' : 'none';
+  });
+  document.querySelectorAll('#curso-detalle-section .form-container, #curso-detalle-section .test-form-panel').forEach(elemento => {
+    elemento.style.display = puedeGestionar ? 'flex' : 'none';
+  });
+  ['btnEditarObjetivos', 'btnEditarRequisitos', 'btn-matricular', 'crearReunionBtn'].forEach(id => {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.style.display = puedeGestionar ? '' : 'none';
+  });
 }
 
 function escaparHtml(valor = '') {
@@ -542,7 +557,6 @@ async function initAuth() {
 function manejarVistaSegunRol(role) {
   const esAdmin = esRolAdmin(role);
   const esProfesor = role === ROLES.TEACHER || esAdmin;
-  const esAsistente = role === ROLES.ASSISTANT;
   const esEstudiante = role === ROLES.STUDENT;
   const agregarAvisoBtn = document.getElementById('agregarAvisoBtn');
   if (agregarAvisoBtn) {
@@ -551,8 +565,8 @@ function manejarVistaSegunRol(role) {
   const elementosControl = [
     { id: 'agregarCurso', permiso: 'create', recurso: 'cursos' },
     { id: 'admin-panel', mostrar: esAdmin },
-    { id: 'btnAsistencia', mostrar: esProfesor || esAsistente || esEstudiante },
-    { id: 'btn-matricular', mostrar: esProfesor || esAsistente || esAdmin },
+    { id: 'btnAsistencia', mostrar: esProfesor },
+    { id: 'btn-matricular', mostrar: esProfesor },
     { id: 'btnEditarObjetivos', mostrar: esProfesor },
     { id: 'btnEditarRequisitos', mostrar: esProfesor },
     { id: 'admin-menu', mostrar: esAdmin },
@@ -567,8 +581,11 @@ function manejarVistaSegunRol(role) {
         (verificarPermiso(item.permiso, item.recurso)) ? displayValue : 'none';
     }
   });
+  document.querySelectorAll('.admin-course-tab').forEach(elemento => {
+    elemento.style.display = esProfesor ? '' : 'none';
+  });
   document.querySelectorAll('.form-container').forEach(form => {
-    form.style.display = (esProfesor || esAsistente) ? 'flex' : 'none';
+    form.style.display = esProfesor ? 'flex' : 'none';
   });
   document.querySelectorAll('.test-form-panel').forEach(form => {
     form.style.display = verificarPermiso('create', 'tests') ? 'flex' : 'none';
@@ -603,15 +620,6 @@ function manejarVistaSegunRol(role) {
             'cursos';
     btn.style.display = verificarPermiso(accion, tipoRecurso) ? 'block' : 'none';
   });
-  if (esAsistente) {
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.style.display = 'none';
-    });
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-      const tipoRecurso = btn.closest('.item')?.classList.contains('clase') ? 'asistencias' : null;
-      btn.style.display = (tipoRecurso && verificarPermiso('update', tipoRecurso)) ? 'block' : 'none';
-    });
-  }
   if (esEstudiante) {
     document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
       btn.style.display = 'none';
@@ -836,7 +844,7 @@ function mostrarSeccion(seccion) {
 }
 
 function mostrarSeccionCurso(seccion) {
-  if (currentUserRole === ROLES.STUDENT && ['participantes', 'asistencia', 'tareas'].includes(seccion)) {
+  if (currentUserRole === ROLES.STUDENT && ['participantes', 'asistencia'].includes(seccion)) {
     seccion = 'presentacion';
   }
   document.querySelectorAll('.curso-nav button').forEach(btn => {
@@ -874,13 +882,15 @@ async function cargarDatos(userRole) {
     capsulas = [];
     modulos = [];
     progresoContenido = [];
+    rolesUsuarioPorCurso = new Map();
     let shouldLoadData = true;
+    const { data: inscripciones, error: inscripcionesError } = await supabase
+      .from('inscripciones')
+      .select('curso_id, role_in_curso')
+      .eq('estudiante_id', user.id);
+    if (inscripcionesError) throw inscripcionesError;
+    rolesUsuarioPorCurso = new Map((inscripciones || []).map(item => [String(item.curso_id), item.role_in_curso]));
     if (userRole === ROLES.STUDENT) {
-      const { data: inscripciones, error: inscripcionesError } = await supabase
-        .from('inscripciones')
-        .select('curso_id')
-        .eq('estudiante_id', user.id);
-      if (inscripcionesError) throw inscripcionesError;
       const cursosIds = inscripciones.map(i => i.curso_id);
       if (cursosIds.length === 0) {
         shouldLoadData = false;
@@ -902,38 +912,7 @@ async function cargarDatos(userRole) {
     }
     if (shouldLoadData && cursos.length > 0) {
       const cursosIds = cursos.map(c => c.id);
-      const { data: guiasData, error: guiasError } = await supabase
-        .from('guias')
-        .select('*')
-        .in('curso_id', cursosIds);
-      if (!guiasError) guias = guiasData || [];
-      const { data: tareasData, error: tareasError } = await supabase
-        .from('tareas')
-        .select('*')
-        .in('curso_id', cursosIds);
-      if (!tareasError) tareas = tareasData || [];
-      const { data: testsData, error: testsError } = await supabase
-        .from('tests')
-        .select('*')
-        .in('curso_id', cursosIds);
-      if (!testsError) tests = testsData || [];
-      const { data: capsulasData, error: capsulasError } = await supabase
-        .from('capsulas')
-        .select('*')
-        .in('curso_id', cursosIds);
-      if (!capsulasError) capsulas = capsulasData || [];
-      const { data: modulosData, error: modulosError } = await supabase
-        .from('curso_modulos')
-        .select('*')
-        .in('curso_id', cursosIds)
-        .order('orden', { ascending: true });
-      if (!modulosError) modulos = modulosData || [];
-      const { data: progresoData, error: progresoError } = await supabase
-        .from('progreso_contenido')
-        .select('*')
-        .eq('estudiante_id', user.id)
-        .in('curso_id', cursosIds);
-      if (!progresoError) progresoContenido = progresoData || [];
+      await cargarContenidoCursos(cursosIds, user.id);
     }
     renderizarCursos();
   } catch (error) {
@@ -949,6 +928,23 @@ async function cargarDatos(userRole) {
     progresoContenido = [];
     renderizarCursos();
   }
+}
+
+async function cargarContenidoCursos(cursosIds, userId) {
+  const consultas = await Promise.all([
+    supabase.from('guias').select('*').in('curso_id', cursosIds),
+    supabase.from('tareas').select('*').in('curso_id', cursosIds),
+    supabase.from('tests').select('*').in('curso_id', cursosIds),
+    supabase.from('capsulas').select('*').in('curso_id', cursosIds),
+    supabase.from('curso_modulos').select('*').in('curso_id', cursosIds).order('orden', { ascending: true }),
+    supabase.from('progreso_contenido').select('*').eq('estudiante_id', userId).in('curso_id', cursosIds)
+  ]);
+  const nombres = ['guías', 'tareas', 'evaluaciones', 'cápsulas', 'módulos', 'progreso'];
+  const fallidas = consultas.map((resultado, indice) => resultado.error ? nombres[indice] : null).filter(Boolean);
+  if (fallidas.length) {
+    throw new Error(`Sin permiso para cargar: ${fallidas.join(', ')}. Ejecuta migracion_permisos_3_roles.sql en Supabase.`);
+  }
+  [guias, tareas, tests, capsulas, modulos, progresoContenido] = consultas.map(resultado => resultado.data || []);
 }
 
 async function getCurrentUser() {
@@ -1782,7 +1778,7 @@ async function toggleCompletada(id) {
     if (esRolAdmin(userRole)) {
       puedeModificar = true;
     }
-    else if (userRole === ROLES.TEACHER || userRole === ROLES.ASSISTANT && tarea.cursos.user_id === userId) {
+    else if (userRole === ROLES.TEACHER && tarea.cursos.user_id === userId) {
       puedeModificar = true;
     }
     else if (userRole === ROLES.STUDENT && tarea.estudiante_asignado_id === userId) {
@@ -2043,7 +2039,6 @@ function renderizarCursos() {
   const userRole = currentUserRole;
   const userId = currentUserId;
   const esAdmin = esRolAdmin(userRole);
-  const esProfesor = userRole === ROLES.TEACHER || userRole === ROLES.ASSISTANT;
   const esEstudiante = userRole === ROLES.STUDENT;
   if (esEstudiante && cursos.length === 0) {
     if (lista) lista.innerHTML = `
@@ -2078,8 +2073,8 @@ function renderizarCursos() {
     const totalTareas = tareas.filter(t => t.curso_id === curso.id).length;
     const totalCapsulas = capsulas.filter(c => c.curso_id === curso.id).length;
     const esPropietario = curso.user_id === userId;
-    const puedeEditar = esAdmin || (esProfesor && esPropietario);
-    const puedeEliminar = esAdmin || (esProfesor && esPropietario);
+    const puedeEditar = puedeGestionarCurso(curso);
+    const puedeEliminar = esAdmin || (userRole === ROLES.TEACHER && esPropietario);
     const esCursoActivo = cursoActual && cursoActual.id === curso.id;
     const colorCurso = curso.color || '#c62828';
     const progreso = obtenerResumenProgresoCurso(curso);
@@ -2107,9 +2102,6 @@ function renderizarCursos() {
             <span><strong>${totalGuias}</strong><small>Guías</small></span>
             <span><strong>${totalTareas}</strong><small>Tareas</small></span>
             <span><strong>${totalCapsulas}</strong><small>Cápsulas</small></span>
-          </div>
-          <div class="course-meta">
-            <span><i class="far fa-calendar"></i> Creado ${toChileDateTimeString(curso.fecha_creacion)}</span>
           </div>
           <div class="course-actions">
             <button onclick="entrarCurso(${curso.id})" class="btn-entrar icon-btn" title="Entrar al curso" aria-label="Entrar al curso">
@@ -3107,6 +3099,7 @@ async function entrarCurso(id) {
     ? previsualizarMarkdown(cursoActual.requisitos)
     : '<p>No hay requisitos previos para este curso.</p>';
   mostrarSeccion('cursoDetalle');
+  aplicarPermisosCurso();
   mostrarSeccionCurso('presentacion');
   await cargarParticipantesCurso();
   renderizarGuias();
@@ -3133,7 +3126,6 @@ async function cargarParticipantesCurso() {
       .order('role_in_curso', { ascending: true });
     if (inscripcionesError) throw inscripcionesError;
     const profesores = [];
-    const asistentes = [];
     const estudiantes = [];
     inscripciones.forEach(inscripcion => {
       const participante = {
@@ -3144,8 +3136,6 @@ async function cargarParticipantesCurso() {
       };
       if (inscripcion.role_in_curso === ROLES.TEACHER) {
         profesores.push(participante);
-      } else if (inscripcion.role_in_curso === ROLES.ASSISTANT) {
-        asistentes.push(participante);
       } else {
         estudiantes.push(participante);
       }
@@ -3165,7 +3155,7 @@ async function cargarParticipantesCurso() {
         });
       }
     }
-    renderizarParticipantes(estudiantes, profesores, asistentes);
+    renderizarParticipantes(estudiantes, profesores);
   } catch (error) {
     console.error('Error al cargar participantes:', error);
     mostrarToast('Error al cargar participantes del curso', 'error');
@@ -3507,11 +3497,12 @@ async function verificarPermisosEdicion(entidad, id) {
 }
 
 function puedeCrearContenido() {
-  return verificarPermiso('create', 'cursos') ||
+  return puedeGestionarCurso() && (
     verificarPermiso('create', 'guias') ||
     verificarPermiso('create', 'tareas') ||
     verificarPermiso('create', 'tests') ||
-    verificarPermiso('create', 'capsulas');
+    verificarPermiso('create', 'capsulas')
+  );
 }
 
 function obtenerIconoPorExtension(url) {
@@ -4176,27 +4167,28 @@ async function exportarCalificaciones(cursoIdParam = null) {
 }
 
 function puedeAdministrarParticipantes() {
-  return verificarPermiso('update', 'participantes') ||
-    verificarPermiso('delete', 'participantes');
+  return puedeGestionarCurso() && (
+    verificarPermiso('update', 'participantes') ||
+    verificarPermiso('delete', 'participantes')
+  );
 }
 
-function renderizarParticipantes(estudiantes = [], profesores = [], asistentes = []) {
+function renderizarParticipantes(estudiantes = [], profesores = []) {
   const listaParticipantes = document.getElementById('lista-participantes');
   if (!listaParticipantes) return;
-  const totalParticipantes = estudiantes.length + profesores.length + asistentes.length;
+  const totalParticipantes = estudiantes.length + profesores.length;
   if (totalParticipantes === 0) {
     listaParticipantes.innerHTML = `
       <div class="participants-empty">
         <i class="fas fa-users"></i>
         <h3>Aún no hay participantes</h3>
-        <p>Matricula estudiantes o asistentes para comenzar a gestionar el curso.</p>
+        <p>Matricula estudiantes o profesores para comenzar a gestionar el curso.</p>
       </div>
     `;
     return;
   }
   const todosLosParticipantes = [
     ...profesores.map(p => ({ ...p, rol: 'Profesor', claseRol: 'teacher', icono: 'fa-chalkboard-teacher' })),
-    ...asistentes.map(a => ({ ...a, rol: 'Asistente', claseRol: 'assistant', icono: 'fa-user-tie' })),
     ...estudiantes.map(e => ({ ...e, rol: 'Estudiante', claseRol: 'student', icono: 'fa-user-graduate' })),
   ];
   let participantesHTML = `
@@ -4208,10 +4200,6 @@ function renderizarParticipantes(estudiantes = [], profesores = [], asistentes =
       <div class="participant-stat">
         <strong>${profesores.length}</strong>
         <span>Profesores</span>
-      </div>
-      <div class="participant-stat">
-        <strong>${asistentes.length}</strong>
-        <span>Asistentes</span>
       </div>
       <div class="participant-stat">
         <strong>${estudiantes.length}</strong>
@@ -4350,8 +4338,7 @@ async function mostrarFormularioInscripcion(estudianteId = null) {
             <select id="inscripcionRol" required>
               <option value="">Seleccionar rol</option>
               <option value="${ROLES.STUDENT}">Estudiante</option>
-              <option value="${ROLES.ASSISTANT}">Asistente</option>
-              <option value="${ROLES.TEACHER}">Profesor</option>
+              ${esRolAdmin() ? `<option value="${ROLES.TEACHER}">Profesor</option>` : ''}
             </select>
           </div>
           <button onclick="guardarInscripcion()" class="auth-submit">
@@ -5155,7 +5142,6 @@ async function editarParticipante(userId) {
             <select id="participanteRol">
               <option value="${ROLES.STUDENT}" ${participante.role === ROLES.STUDENT ? 'selected' : ''}>Estudiante</option>
               <option value="${ROLES.TEACHER}" ${participante.role === ROLES.TEACHER ? 'selected' : ''}>Profesor</option>
-              <option value="${ROLES.ASSISTANT}" ${participante.role === ROLES.ASSISTANT ? 'selected' : ''}>Asistente</option>
               <option value="${ROLES.ADMIN}" ${esRolAdmin(participante.role) ? 'selected' : ''}>Administrador</option>
             </select>
           </div>
@@ -7446,12 +7432,12 @@ const CHATBOT_RESPUESTAS = {
   "clases": "Las clases están organizadas dentro de cada curso. Puedes ver los materiales, tareas, y cápsulas al entrar al curso correspondiente.",
   "horario": "Por ahora el sistema no tiene un horario integrado, pero puedes usar el calendario para ver fechas importantes de tareas y reuniones.",
   "cuándo tengo clase": "Revisa la sección Reuniones o el calendario para ver fechas programadas.",
-  "contacto": "Puedes contactar a asistentes o profesores desde la sección 'Participantes'. Allí verás sus correos y roles.",
+  "contacto": "Puedes contactar a tus profesores desde la sección 'Participantes'. Allí verás sus correos y roles.",
   "participantes": "Desde la sección Participantes puedes ver quiénes están en el curso y sus datos de contacto.",
-  "avisos": "Para ver los avisos generales:<br>1. Haz clic en el ícono de avisos 📢 en la barra superior<br>2. Lee los mensajes publicados por docentes o asistentes",
+  "avisos": "Para ver los avisos generales:<br>1. Haz clic en el ícono de avisos 📢 en la barra superior<br>2. Lee los mensajes publicados por docentes",
   "noticias": "Los avisos generales están en el ícono 📢 en la barra superior. Haz clic para ver los mensajes importantes.",
   "foro": "Actualmente no contamos con un foro de discusión, pero puedes comunicarte con tu profesor o compañeros desde la sección Participantes.",
-  "dónde está el foro": "No contamos con foro por ahora, pero puedes escribir directamente a tus docentes o asistentes.",
+  "dónde está el foro": "No contamos con foro por ahora, pero puedes escribir directamente a tus docentes.",
   "cerrar sesión": "Para cerrar sesión:<br>1. Haz clic en tu nombre o ícono de usuario<br>2. Selecciona 'Cerrar sesión' en el menú desplegable",
   "perfil": "Puedes ver o editar tu perfil desde el ícono de usuario, normalmente en la esquina superior derecha.",
   "idioma": "Por ahora la plataforma solo está disponible en español. Estamos trabajando para ofrecer más idiomas próximamente.",
@@ -7553,8 +7539,7 @@ async function renderizarPerfil() {
         : `https://www.gravatar.com/avatar/?d=mp`
       : 'https://www.gravatar.com/avatar/?d=mp';
     const roleLabel = userData?.role === 'admin' ? 'Administrador' :
-      userData?.role === 'teacher' ? 'Profesor' :
-        userData?.role === 'assistant' ? 'Asistente' : 'Estudiante';
+      userData?.role === 'teacher' ? 'Profesor' : 'Estudiante';
     perfilSection.innerHTML = `
       <div class="profile-container">
         <div class="profile-page-header">

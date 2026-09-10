@@ -179,8 +179,7 @@ create table public.user_roles (
         array[
           'student'::text,
           'teacher'::text,
-          'admin'::text,
-          'assistant'::text
+          'admin'::text
         ]
       )
     )
@@ -295,9 +294,7 @@ alter table public.inscripciones
     role_in_curso = any (
       array[
         'student'::text,
-        'teacher'::text,
-        'admin'::text,
-        'assistant'::text
+        'teacher'::text
       ]
     )
   );
@@ -385,12 +382,50 @@ $$;
 grant execute on function public.current_user_is_admin() to authenticated;
 grant execute on function public.current_user_role() to authenticated;
 
+create or replace function public.can_read_user_profile(profile_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select profile_user_id = auth.uid()
+    or public.current_user_role() in ('admin', 'teacher')
+    or exists (
+      select 1
+      from public.cursos c
+      join public.inscripciones i on i.curso_id = c.id
+      where c.user_id = profile_user_id and i.estudiante_id = auth.uid()
+    );
+$$;
+
+create or replace function public.protect_user_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role and not public.current_user_is_admin() then
+    raise exception 'Solo un administrador puede cambiar roles';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_user_role_before_update on public.user_roles;
+create trigger protect_user_role_before_update
+before update on public.user_roles
+for each row execute function public.protect_user_role();
+
+grant execute on function public.can_read_user_profile(uuid) to authenticated;
+
 drop policy if exists "Usuarios autenticados pueden leer roles" on public.user_roles;
 create policy "Usuarios autenticados pueden leer roles"
 on public.user_roles
 for select
 to authenticated
-using (true);
+using (public.can_read_user_profile(user_id));
 
 drop policy if exists "Usuarios pueden crear su rol inicial" on public.user_roles;
 create policy "Usuarios pueden crear su rol inicial"
@@ -447,11 +482,18 @@ security definer
 set search_path = public
 as $$
   select
-    public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) or
+    public.current_user_is_admin() or
+    exists (
+      select 1
+      from public.cursos c
+      where c.id = $1
+        and c.user_id = auth.uid()
+        and public.current_user_role() = 'teacher'
+    ) or
     exists (
       select 1
       from public.inscripciones i
-      where i.curso_id = course_id
+      where i.curso_id = $1
         and i.estudiante_id = auth.uid()
     );
 $$;
@@ -463,20 +505,21 @@ security definer
 set search_path = public
 as $$
   select
-    public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) or
-    exists (
-      select 1
-      from public.cursos c
-      where c.id = course_id
-        and c.user_id = auth.uid()
-        and public.current_user_has_any_role(array['teacher'])
-    ) or
-    exists (
-      select 1
-      from public.inscripciones i
-      where i.curso_id = course_id
-        and i.estudiante_id = auth.uid()
-        and i.role_in_curso in ('teacher', 'assistant')
+    public.current_user_is_admin() or
+    (
+      public.current_user_role() = 'teacher' and
+      (
+        exists (
+          select 1 from public.cursos c
+          where c.id = $1 and c.user_id = auth.uid()
+        ) or
+        exists (
+          select 1 from public.inscripciones i
+          where i.curso_id = $1
+            and i.estudiante_id = auth.uid()
+            and i.role_in_curso = 'teacher'
+        )
+      )
     );
 $$;
 
@@ -499,13 +542,7 @@ drop policy if exists "Cursos visibles segun rol" on public.cursos;
 create policy "Cursos visibles segun rol"
 on public.cursos for select to authenticated
 using (
-  public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) or
-  exists (
-    select 1
-    from public.inscripciones i
-    where i.curso_id = cursos.id
-      and i.estudiante_id = auth.uid()
-  )
+  public.can_read_course(id)
 );
 
 drop policy if exists "Profesores y admins crean cursos" on public.cursos;
@@ -539,7 +576,7 @@ using (
 drop policy if exists "Contenido visible por curso" on public.guias;
 create policy "Contenido visible por curso"
 on public.guias for select to authenticated
-using (public.can_read_course(curso_id));
+using (public.can_manage_course(curso_id) or (public.can_read_course(curso_id) and visibilidad = 'publico'));
 
 drop policy if exists "Contenido editable por gestores" on public.guias;
 create policy "Contenido editable por gestores"
@@ -602,22 +639,28 @@ using (public.current_user_has_any_role(array['admin', 'teacher']) and public.ca
 drop policy if exists "Inscripciones visibles segun curso" on public.inscripciones;
 create policy "Inscripciones visibles segun curso"
 on public.inscripciones for select to authenticated
-using (public.can_read_course(curso_id) or estudiante_id = auth.uid());
+using (public.can_manage_course(curso_id) or estudiante_id = auth.uid());
 
 drop policy if exists "Inscripciones creables por profesores y admins" on public.inscripciones;
 create policy "Inscripciones creables por profesores y admins"
 on public.inscripciones for insert to authenticated
 with check (
-  public.current_user_has_any_role(array['admin', 'teacher']) and
-  public.can_manage_course(curso_id)
+  public.current_user_is_admin() or
+  (public.current_user_role() = 'teacher' and public.can_manage_course(curso_id) and role_in_curso = 'student')
 );
+
+drop policy if exists "Inscripciones actualizables por administradores" on public.inscripciones;
+create policy "Inscripciones actualizables por administradores"
+on public.inscripciones for update to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
 
 drop policy if exists "Inscripciones eliminables por profesores y admins" on public.inscripciones;
 create policy "Inscripciones eliminables por profesores y admins"
 on public.inscripciones for delete to authenticated
 using (
-  public.current_user_has_any_role(array['admin', 'teacher']) and
-  public.can_manage_course(curso_id)
+  public.current_user_is_admin() or
+  (public.current_user_role() = 'teacher' and role_in_curso = 'student' and public.can_manage_course(curso_id))
 );
 
 drop policy if exists "Reuniones visibles por curso" on public.reuniones;
@@ -636,13 +679,13 @@ with check (
 drop policy if exists "Reuniones actualizables por gestores" on public.reuniones;
 create policy "Reuniones actualizables por gestores"
 on public.reuniones for update to authenticated
-using (user_id = auth.uid() or public.current_user_is_admin())
-with check (user_id = auth.uid() or public.current_user_is_admin());
+using (curso_id is not null and public.can_manage_course(curso_id::integer))
+with check (curso_id is not null and public.can_manage_course(curso_id::integer));
 
 drop policy if exists "Reuniones eliminables por gestores" on public.reuniones;
 create policy "Reuniones eliminables por gestores"
 on public.reuniones for delete to authenticated
-using (user_id = auth.uid() or public.current_user_is_admin());
+using (curso_id is not null and public.can_manage_course(curso_id::integer));
 
 drop policy if exists "Avisos visibles para autenticados" on public.avisos;
 create policy "Avisos visibles para autenticados"
@@ -652,18 +695,18 @@ using (true);
 drop policy if exists "Avisos creables por staff" on public.avisos;
 create policy "Avisos creables por staff"
 on public.avisos for insert to authenticated
-with check (user_id = auth.uid() and public.current_user_has_any_role(array['admin', 'teacher', 'assistant']));
+with check (user_id = auth.uid() and public.current_user_has_any_role(array['admin', 'teacher']));
 
 drop policy if exists "Avisos actualizables por staff" on public.avisos;
 create policy "Avisos actualizables por staff"
 on public.avisos for update to authenticated
-using (public.current_user_has_any_role(array['admin', 'teacher', 'assistant']))
-with check (public.current_user_has_any_role(array['admin', 'teacher', 'assistant']));
+using (public.current_user_is_admin() or (user_id = auth.uid() and public.current_user_role() = 'teacher'))
+with check (public.current_user_is_admin() or (user_id = auth.uid() and public.current_user_role() = 'teacher'));
 
 drop policy if exists "Avisos eliminables por profesores y admins" on public.avisos;
 create policy "Avisos eliminables por profesores y admins"
 on public.avisos for delete to authenticated
-using (public.current_user_has_any_role(array['admin', 'teacher']));
+using (public.current_user_is_admin() or (user_id = auth.uid() and public.current_user_role() = 'teacher'));
 
 drop policy if exists "Clases visibles por curso" on public.clases;
 create policy "Clases visibles por curso"
@@ -695,7 +738,7 @@ using (
     select 1
     from public.clases c
     where c.id = clase_id
-      and public.can_read_course(c.curso_id)
+      and public.can_manage_course(c.curso_id)
   )
 );
 
@@ -747,7 +790,7 @@ using (
 drop policy if exists "Entregas visibles por curso o estudiante" on public.entregas;
 create policy "Entregas visibles por curso o estudiante"
 on public.entregas for select to authenticated
-using (estudiante_id = auth.uid() or public.can_read_course(curso_id));
+using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
 
 drop policy if exists "Entregas creables por estudiante" on public.entregas;
 create policy "Entregas creables por estudiante"
@@ -796,7 +839,7 @@ on storage.objects for insert
 to authenticated
 with check (
   bucket_id = 'archivos' and
-  public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) and
+  public.current_user_has_any_role(array['admin', 'teacher']) and
   (name like 'guias/%' or name like 'tareas/%' or name like 'entregas/%')
 );
 
@@ -816,11 +859,11 @@ on storage.objects for update
 to authenticated
 using (
   bucket_id = 'archivos' and
-  public.current_user_has_any_role(array['admin', 'teacher', 'assistant'])
+  (public.current_user_is_admin() or (public.current_user_role() = 'teacher' and owner_id::text = auth.uid()::text))
 )
 with check (
   bucket_id = 'archivos' and
-  public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) and
+  public.current_user_has_any_role(array['admin', 'teacher']) and
   (name like 'guias/%' or name like 'tareas/%' or name like 'entregas/%')
 );
 
@@ -844,7 +887,8 @@ to authenticated
 using (
   bucket_id = 'archivos' and
   (
-    public.current_user_has_any_role(array['admin', 'teacher', 'assistant']) or
+    public.current_user_is_admin() or
+    (public.current_user_role() = 'teacher' and owner_id::text = auth.uid()::text) or
     name like ('entregas/' || auth.uid()::text || '/%')
   )
 );
@@ -941,16 +985,28 @@ alter table public.certificados enable row level security;
 grant select, insert, update, delete on public.curso_modulos, public.tests, public.test_intentos, public.progreso_contenido, public.certificados to authenticated;
 grant usage, select on sequence public.tests_id_seq to authenticated;
 
+drop policy if exists "Modulos visibles por curso" on public.curso_modulos;
+drop policy if exists "Modulos gestionables" on public.curso_modulos;
+drop policy if exists "Tests visibles por curso" on public.tests;
+drop policy if exists "Tests gestionables" on public.tests;
+drop policy if exists "Intentos visibles para participante" on public.test_intentos;
+drop policy if exists "Estudiantes crean sus intentos" on public.test_intentos;
+drop policy if exists "Gestores corrigen intentos" on public.test_intentos;
+drop policy if exists "Progreso propio" on public.progreso_contenido;
+drop policy if exists "Estudiantes registran su progreso" on public.progreso_contenido;
+drop policy if exists "Estudiantes actualizan su progreso" on public.progreso_contenido;
+drop policy if exists "Certificados propios o gestionables" on public.certificados;
+
 create policy "Modulos visibles por curso" on public.curso_modulos for select to authenticated using (public.can_read_course(curso_id));
 create policy "Modulos gestionables" on public.curso_modulos for all to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id) and user_id = auth.uid());
-create policy "Tests visibles por curso" on public.tests for select to authenticated using (public.can_read_course(curso_id));
+create policy "Tests visibles por curso" on public.tests for select to authenticated using (public.can_manage_course(curso_id) or (public.can_read_course(curso_id) and estado = 'publicado'));
 create policy "Tests gestionables" on public.tests for all to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id) and user_id = auth.uid());
 create policy "Intentos visibles para participante" on public.test_intentos for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
-create policy "Estudiantes crean sus intentos" on public.test_intentos for insert to authenticated with check (estudiante_id = auth.uid() and public.can_read_course(curso_id));
+create policy "Estudiantes crean sus intentos" on public.test_intentos for insert to authenticated with check (estudiante_id = auth.uid() and public.current_user_role() = 'student' and public.can_read_course(curso_id));
 create policy "Gestores corrigen intentos" on public.test_intentos for update to authenticated using (public.can_manage_course(curso_id)) with check (public.can_manage_course(curso_id));
 create policy "Progreso propio" on public.progreso_contenido for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
-create policy "Estudiantes registran su progreso" on public.progreso_contenido for insert to authenticated with check (estudiante_id = auth.uid() and public.can_read_course(curso_id));
-create policy "Estudiantes actualizan su progreso" on public.progreso_contenido for update to authenticated using (estudiante_id = auth.uid()) with check (estudiante_id = auth.uid());
+create policy "Estudiantes registran su progreso" on public.progreso_contenido for insert to authenticated with check (estudiante_id = auth.uid() and public.current_user_role() = 'student' and public.can_read_course(curso_id));
+create policy "Estudiantes actualizan su progreso" on public.progreso_contenido for update to authenticated using (estudiante_id = auth.uid() and public.current_user_role() = 'student') with check (estudiante_id = auth.uid() and public.current_user_role() = 'student');
 create policy "Certificados propios o gestionables" on public.certificados for select to authenticated using (estudiante_id = auth.uid() or public.can_manage_course(curso_id));
 
 create or replace function public.emitir_certificado(p_curso_id integer)
