@@ -351,11 +351,11 @@
           <button id="btnGuias" onclick="activarPestanaCurso('guias')"><i class="fas fa-file-alt"></i> Guías</button>
           <button id="btnClasesVivo" onclick="activarPestanaCurso('clasesVivo')"><i class="fas fa-video"></i> Clases en vivo</button>
           <button id="btnTests" onclick="activarPestanaCurso('tests')"><i class="fas fa-clipboard-list"></i> Evaluaciones</button>
-          <button id="btnCertificado" onclick="activarPestanaCurso('certificado')"><i class="fas fa-certificate"></i> Certificado</button>
           <button id="btnParticipantes" class="curso-nav-btn admin-course-tab"><i class="fas fa-users"></i> Participantes</button>
           <button id="btnAsistencia" class="curso-nav-btn admin-course-tab"><i class="fas fa-clipboard-check"></i> Asistencia</button>
           <button id="btnTareas"><i class="fas fa-tasks"></i> Tareas</button>
-          <button id="btnCapsulas" class="admin-course-tab"><i class="fas fa-video"></i> Cápsulas</button>
+          <button id="btnCapsulas"><i class="fas fa-video"></i> Cápsulas</button>
+          <button id="btnCertificado" onclick="activarPestanaCurso('certificado')"><i class="fas fa-certificate"></i> Certificado</button>
         </nav>
 
         <!-- Contenido dinámico del curso -->
@@ -379,10 +379,6 @@
                       <i class="fas fa-user-tie"></i>
                       <span id="curso-profesor"></span>
                     </div>
-                    <div class="info-item admin-course-meta">
-                      <i class="fas fa-calendar-alt"></i>
-                      <span id="curso-fecha-creacion"></span>
-                    </div>
                     <div class="info-item">
                       <i class="fas fa-book"></i>
                       <span id="curso-total-guias"></span>
@@ -403,13 +399,6 @@
                   <div id="curso-objetivos-content"></div>
                 </div>
 
-                <div class="curso-requisitos">
-                  <div class="section-header">
-                    <h3><i class="fas fa-clipboard-check"></i> Requisitos</h3>
-                    <button id="btnEditarRequisitos" class="btn-edit-small"><i class="fas fa-edit"></i> Editar</button>
-                  </div>
-                  <div id="curso-requisitos-content"></div>
-                </div>
                 <div class="curso-progress-panel">
                   <div class="section-header">
                     <h3><i class="fas fa-chart-line"></i> Avance del curso</h3>

@@ -71,7 +71,7 @@ function aplicarPermisosCurso() {
   document.querySelectorAll('#curso-detalle-section .form-container, #curso-detalle-section .test-form-panel').forEach(elemento => {
     elemento.style.display = puedeGestionar ? 'flex' : 'none';
   });
-  ['btnEditarObjetivos', 'btnEditarRequisitos', 'btn-matricular', 'crearReunionBtn'].forEach(id => {
+  ['btnEditarObjetivos', 'btn-matricular', 'crearReunionBtn'].forEach(id => {
     const elemento = document.getElementById(id);
     if (elemento) elemento.style.display = puedeGestionar ? '' : 'none';
   });
@@ -568,7 +568,6 @@ function manejarVistaSegunRol(role) {
     { id: 'btnAsistencia', mostrar: esProfesor },
     { id: 'btn-matricular', mostrar: esProfesor },
     { id: 'btnEditarObjetivos', mostrar: esProfesor },
-    { id: 'btnEditarRequisitos', mostrar: esProfesor },
     { id: 'admin-menu', mostrar: esAdmin },
     { id: 'configBtn', mostrar: esAdmin }
   ];
@@ -699,7 +698,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnCapsulas')?.addEventListener('click', () => mostrarSeccionCurso('capsulas'));
     document.getElementById('agregarModulo')?.addEventListener('click', agregarModulo);
     document.getElementById('btnEditarObjetivos')?.addEventListener('click', editarObjetivos);
-    document.getElementById('btnEditarRequisitos')?.addEventListener('click', editarRequisitos);
     document.getElementById('agregarGuia')?.addEventListener('click', agregarGuia);
     document.getElementById('agregarTarea')?.addEventListener('click', agregarTarea);
     document.getElementById('agregarTest')?.addEventListener('click', agregarTest);
@@ -3087,7 +3085,6 @@ async function entrarCurso(id) {
   obtenerInfoProfesor(cursoActual.user_id).then(profesor => {
     document.getElementById('curso-profesor').textContent = profesor?.nombre || 'Profesor no disponible';
   });
-  document.getElementById('curso-fecha-creacion').textContent = toChileDateTimeString(cursoActual.fecha_creacion);
   const guiasCurso = guias.filter(g => g.curso_id === cursoActual.id).length;
   const tareasCurso = tareas.filter(t => t.curso_id === cursoActual.id).length;
   document.getElementById('curso-total-guias').textContent = `${guiasCurso} ${guiasCurso === 1 ? 'guía' : 'guías'}`;
@@ -3095,9 +3092,6 @@ async function entrarCurso(id) {
   document.getElementById('curso-objetivos-content').innerHTML = cursoActual.objetivos
     ? previsualizarMarkdown(cursoActual.objetivos)
     : '<p>No se han definido objetivos para este curso.</p>';
-  document.getElementById('curso-requisitos-content').innerHTML = cursoActual.requisitos
-    ? previsualizarMarkdown(cursoActual.requisitos)
-    : '<p>No hay requisitos previos para este curso.</p>';
   mostrarSeccion('cursoDetalle');
   aplicarPermisosCurso();
   mostrarSeccionCurso('presentacion');
@@ -4860,9 +4854,6 @@ async function renderizarPresentacionCurso() {
   document.getElementById('curso-objetivos-content').innerHTML = cursoActual.objetivos
     ? previsualizarMarkdown(cursoActual.objetivos)
     : '<p>No se han definido objetivos para este curso.</p>';
-  document.getElementById('curso-requisitos-content').innerHTML = cursoActual.requisitos
-    ? previsualizarMarkdown(cursoActual.requisitos)
-    : '<p>No hay requisitos previos para este curso.</p>';
   const progresoContent = document.getElementById('curso-progreso-content');
   if (progresoContent) {
     const progreso = obtenerResumenProgresoCurso(cursoActual);
