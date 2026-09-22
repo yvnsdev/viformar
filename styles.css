@@ -11519,6 +11519,209 @@ body:not(.logged-in) .main-content {
   padding: 0;
 }
 
+/* Recorrido final y simplificado del estudiante */
+.student-primary-menu {
+  display: none;
+}
+
+.course-card .course-actions .btn-entrar.icon-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.student-role .curso-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.student-role .curso-detalles {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+}
+
+.student-role .curso-info,
+.student-role .curso-objetivos,
+.student-role .curso-requisitos,
+.student-role .curso-progress-panel {
+  margin: 0;
+}
+
+.student-role .curso-info,
+.student-role .curso-objetivos,
+.student-role .curso-requisitos {
+  grid-column: 1;
+}
+
+.student-role .curso-progress-panel {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
+.student-learning-path {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+}
+
+.student-module-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
+  overflow: hidden;
+}
+
+.student-module-header {
+  background: var(--color-surface-soft);
+  border-bottom: 1px solid var(--color-border);
+  padding: 18px 20px;
+}
+
+.student-module-header span,
+.module-sequence-type {
+  color: var(--color-primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-module-header h3,
+.module-sequence-content h4 {
+  color: #333333;
+  margin: 4px 0 0;
+}
+
+.module-sequence {
+  padding: 4px 20px 20px;
+}
+
+.module-sequence-item {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding-top: 20px;
+  position: relative;
+}
+
+.module-sequence-item:not(:last-child)::before {
+  background: #ffd2cf;
+  content: "";
+  height: calc(100% - 20px);
+  left: 16px;
+  position: absolute;
+  top: 54px;
+  width: 2px;
+}
+
+.module-sequence-marker {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border: 1px solid #ffd2cf;
+  border-radius: 50%;
+  color: var(--color-primary);
+  display: flex;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  position: relative;
+  width: 34px;
+  z-index: 1;
+}
+
+.module-sequence-item.is-complete .module-sequence-marker {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.module-sequence-content {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 0 20px;
+}
+
+.module-sequence-item:last-child .module-sequence-content {
+  border-bottom: 0;
+}
+
+.module-sequence-help {
+  color: var(--color-muted);
+  margin: 6px 0 14px;
+}
+
+.module-sequence-body iframe,
+.module-sequence-body video {
+  max-width: 100%;
+}
+
+.certificates-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.student-certificate-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.student-certificate-icon {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border-radius: 50%;
+  color: var(--color-primary);
+  display: flex;
+  font-size: 1.3rem;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.student-certificate-card h3,
+.student-certificate-card p {
+  margin: 3px 0;
+}
+
+.student-certificate-card > div > span {
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .student-role .curso-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-role .curso-detalles {
+    grid-template-columns: 1fr;
+  }
+
+  .student-role .curso-info,
+  .student-role .curso-objetivos,
+  .student-role .curso-requisitos,
+  .student-role .curso-progress-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .student-certificate-card {
+    align-items: start;
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .student-certificate-card button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
 body:not(.logged-in) #welcome-section {
   display: block;
 }

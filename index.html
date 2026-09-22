@@ -43,19 +43,27 @@
     <div id="sidebar-menu" class="sidebar-menu">
       <ul class="main-menu">
         <h4 style="margin-left: 10px;">Bienvenido <span id="sidebarWelcomeUser"></span></h4>
-        <li class="menu-item" onclick="mostrarSeccion('cursos')">
+        <li class="menu-item" id="menuInicio" onclick="mostrarSeccion('cursos')">
           <i class="fas fa-house"></i>
           <span>Inicio</span>
         </li>
-        <li class="menu-item" onclick="mostrarSeccion('cursos')">
+        <li class="menu-item" id="menuCursos" onclick="mostrarSeccion('cursos')">
           <i class="fas fa-book-open"></i>
-          <span>Cursos</span>
+          <span>Mis cursos</span>
         </li>
-        <li class="menu-item" onclick="mostrarSeccion('calificaciones')">
+        <li class="menu-item student-primary-menu" id="menuCertificados" onclick="mostrarSeccion('certificados')">
+          <i class="fas fa-certificate"></i>
+          <span>Certificados</span>
+        </li>
+        <li class="menu-item student-primary-menu" id="menuPerfil" onclick="mostrarSeccion('perfil')">
+          <i class="fas fa-user"></i>
+          <span>Mi perfil</span>
+        </li>
+        <li class="menu-item extended-menu-item" onclick="mostrarSeccion('calificaciones')">
           <i class="fas fa-graduation-cap"></i>
           <span>Académico</span>
         </li>
-        <li class="menu-item" onclick="mostrarSeccion('calendario')">
+        <li class="menu-item extended-menu-item" onclick="mostrarSeccion('calendario')">
           <i class="fas fa-calendar-alt"></i>
           <span>Calendario</span>
         </li>
@@ -63,11 +71,11 @@
           <i class="fas fa-question-circle"></i>
           <span>Ayuda</span>
         </li> -->
-        <li class="menu-item" onclick="mostrarSeccion('acerca')">
+        <li class="menu-item extended-menu-item" onclick="mostrarSeccion('acerca')">
           <i class="fas fa-info-circle"></i>
           <span>Acerca de</span>
         </li>
-        <li class="menu-item" id="configBtn" onclick="mostrarSeccion('configuracion')">
+        <li class="menu-item extended-menu-item" id="configBtn" onclick="mostrarSeccion('configuracion')">
           <i class="fas fa-cogs"></i>
           <span>Configuración</span>
         </li>
@@ -340,14 +348,14 @@
       <!-- Vista detalle de un curso -->
       <section id="curso-detalle-section">
         <div class="curso-header">
-          <button id="volverCursos" class="back-btn"><i class="fas fa-arrow-left"></i> Volver al panel</button>
+          <button id="volverCursos" class="back-btn"><i class="fas fa-arrow-left"></i> Volver a mis cursos</button>
           <h2 id="curso-titulo"></h2>
           <p id="curso-descripcion"></p>
         </div>
 
         <nav class="curso-nav">
-          <button id="btnPresentacion" class="active" onclick="activarPestanaCurso('presentacion')"><i class="fas fa-info-circle"></i> Presentación</button>
-          <button id="btnContenido" onclick="activarPestanaCurso('contenido')"><i class="fas fa-list-ul"></i> Contenido</button>
+          <button id="btnPresentacion" class="active" onclick="activarPestanaCurso('presentacion')"><i class="fas fa-info-circle"></i> Información del curso</button>
+          <button id="btnContenido" onclick="activarPestanaCurso('contenido')"><i class="fas fa-list-ul"></i> Módulos</button>
           <button id="btnGuias" onclick="activarPestanaCurso('guias')"><i class="fas fa-file-alt"></i> Guías</button>
           <button id="btnClasesVivo" onclick="activarPestanaCurso('clasesVivo')"><i class="fas fa-video"></i> Clases en vivo</button>
           <button id="btnTests" onclick="activarPestanaCurso('tests')"><i class="fas fa-clipboard-list"></i> Evaluaciones</button>
@@ -380,12 +388,12 @@
                       <span id="curso-profesor"></span>
                     </div>
                     <div class="info-item">
-                      <i class="fas fa-book"></i>
-                      <span id="curso-total-guias"></span>
+                      <i class="fas fa-book-open"></i>
+                      <span id="curso-total-modulos"></span>
                     </div>
                     <div class="info-item">
-                      <i class="fas fa-tasks"></i>
-                      <span id="curso-total-tareas"></span>
+                      <i class="fas fa-clock"></i>
+                      <span id="curso-horas-contenido"></span>
                     </div>
                   </div>
                 </div>
@@ -397,6 +405,14 @@
                     <button id="btnEditarObjetivos" class="btn-edit-small"><i class="fas fa-edit"></i> Editar</button>
                   </div>
                   <div id="curso-objetivos-content"></div>
+                </div>
+
+                <div class="curso-requisitos">
+                  <div class="section-header">
+                    <h3><i class="fas fa-list-check"></i> Requisitos</h3>
+                    <button id="btnEditarRequisitos" class="btn-edit-small"><i class="fas fa-edit"></i> Editar</button>
+                  </div>
+                  <div id="curso-requisitos-content"></div>
                 </div>
 
                 <div class="curso-progress-panel">
@@ -712,6 +728,15 @@
           </div>
           <div id="tabla-calificaciones" class="grades-table"></div>
         </div>
+      </section>
+
+      <section id="certificados-section">
+        <div class="page-title-card">
+          <span class="form-eyebrow">Certificación</span>
+          <h2><i class="fas fa-certificate"></i> Mis certificados</h2>
+          <p>Aquí puedes descargar los certificados de los cursos que has aprobado.</p>
+        </div>
+        <div id="certificados-estudiante" class="certificates-grid"></div>
       </section>
 
       <!-- Sección de Ayuda -->

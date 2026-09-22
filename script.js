@@ -65,15 +65,21 @@ function puedeGestionarCurso(curso = cursoActual) {
 
 function aplicarPermisosCurso() {
   const puedeGestionar = puedeGestionarCurso();
+  const esEstudiante = esEstudianteActual();
   document.querySelectorAll('#curso-detalle-section .admin-course-tab').forEach(elemento => {
     elemento.style.display = puedeGestionar ? '' : 'none';
   });
   document.querySelectorAll('#curso-detalle-section .form-container, #curso-detalle-section .test-form-panel').forEach(elemento => {
     elemento.style.display = puedeGestionar ? 'flex' : 'none';
   });
-  ['btnEditarObjetivos', 'btn-matricular', 'crearReunionBtn'].forEach(id => {
+  ['btnEditarObjetivos', 'btnEditarRequisitos', 'btn-matricular', 'crearReunionBtn'].forEach(id => {
     const elemento = document.getElementById(id);
     if (elemento) elemento.style.display = puedeGestionar ? '' : 'none';
+  });
+  const pestañasEstudiante = new Set(['btnPresentacion', 'btnContenido', 'btnTests', 'btnCertificado']);
+  document.querySelectorAll('#curso-detalle-section .curso-nav > button').forEach(boton => {
+    if (esEstudiante) boton.style.display = pestañasEstudiante.has(boton.id) ? '' : 'none';
+    else if (!boton.classList.contains('admin-course-tab')) boton.style.display = '';
   });
 }
 
@@ -558,6 +564,13 @@ function manejarVistaSegunRol(role) {
   const esAdmin = esRolAdmin(role);
   const esProfesor = role === ROLES.TEACHER || esAdmin;
   const esEstudiante = role === ROLES.STUDENT;
+  document.body.classList.toggle('student-role', esEstudiante);
+  document.querySelectorAll('.student-primary-menu').forEach(elemento => {
+    elemento.style.display = esEstudiante ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.extended-menu-item').forEach(elemento => {
+    elemento.style.display = esEstudiante ? 'none' : 'flex';
+  });
   const agregarAvisoBtn = document.getElementById('agregarAvisoBtn');
   if (agregarAvisoBtn) {
     agregarAvisoBtn.style.display = verificarPermiso('create', 'avisos') ? 'block' : 'none';
@@ -683,7 +696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('curso-detalle-section') ||
     document.getElementById('dashboard-section');
   if (isCoursePage) {
-    await cargarDatos();
+    await cargarDatos(currentUserRole);
     const seccionInicial = window.location.hash ? window.location.hash.substring(1) : 'cursos';
     mostrarSeccion(seccionInicial);
     document.getElementById('agregarCurso')?.addEventListener('click', agregarCurso);
@@ -698,6 +711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnCapsulas')?.addEventListener('click', () => mostrarSeccionCurso('capsulas'));
     document.getElementById('agregarModulo')?.addEventListener('click', agregarModulo);
     document.getElementById('btnEditarObjetivos')?.addEventListener('click', editarObjetivos);
+    document.getElementById('btnEditarRequisitos')?.addEventListener('click', editarRequisitos);
     document.getElementById('agregarGuia')?.addEventListener('click', agregarGuia);
     document.getElementById('agregarTarea')?.addEventListener('click', agregarTarea);
     document.getElementById('agregarTest')?.addEventListener('click', agregarTest);
@@ -763,6 +777,7 @@ const secciones = {
   calendario: document.getElementById('calendario-section'),
   videochat: document.getElementById('videochat-section'),
   calificaciones: document.getElementById('calificaciones-section'),
+  certificados: document.getElementById('certificados-section'),
   asistencia: document.getElementById('asistencia-section'),
   avisos: document.getElementById('avisos-section'),
   ayuda: document.getElementById('ayuda-section'),
@@ -810,6 +825,9 @@ function mostrarSeccion(seccion) {
       break;
     case 'calificaciones':
       renderizarCalificaciones();
+      break;
+    case 'certificados':
+      renderizarCertificadosEstudiante();
       break;
     case 'curso-detalle':
       if (cursoActual) {
@@ -2067,9 +2085,13 @@ function renderizarCursos() {
   }
 
   cursos.forEach(curso => {
-    const totalGuias = guias.filter(g => g.curso_id === curso.id).length;
-    const totalTareas = tareas.filter(t => t.curso_id === curso.id).length;
-    const totalCapsulas = capsulas.filter(c => c.curso_id === curso.id).length;
+    const totalModulos = modulos.filter(m => m.curso_id === curso.id).length;
+    const minutosContenido = capsulas
+      .filter(c => c.curso_id === curso.id)
+      .reduce((total, capsula) => total + Number(capsula.duracion || 0), 0);
+    const horasContenido = minutosContenido > 0
+      ? `${(minutosContenido / 60).toFixed(minutosContenido % 60 === 0 ? 0 : 1)} h`
+      : '0 h';
     const esPropietario = curso.user_id === userId;
     const puedeEditar = puedeGestionarCurso(curso);
     const puedeEliminar = esAdmin || (userRole === ROLES.TEACHER && esPropietario);
@@ -2097,13 +2119,13 @@ function renderizarCursos() {
             ${renderizarBarraProgreso(progreso.porcentaje)}
           </div>
           <div class="course-stats">
-            <span><strong>${totalGuias}</strong><small>Guías</small></span>
-            <span><strong>${totalTareas}</strong><small>Tareas</small></span>
-            <span><strong>${totalCapsulas}</strong><small>Cápsulas</small></span>
+            <span><strong>${totalModulos}</strong><small>Módulos</small></span>
+            <span><strong>${horasContenido}</strong><small>Horas de contenido</small></span>
+            <span><strong>${progreso.porcentaje}%</strong><small>Porcentaje completado</small></span>
           </div>
           <div class="course-actions">
             <button onclick="entrarCurso(${curso.id})" class="btn-entrar icon-btn" title="Entrar al curso" aria-label="Entrar al curso">
-              <i class="fas fa-arrow-right"></i>
+              <i class="fas fa-play-circle"></i><span>${progreso.porcentaje > 0 ? 'Continuar curso' : 'Entrar al curso'}</span>
             </button>
             ${puedeEditar ? `
               <button class="btn-edit icon-btn" onclick="editarCurso(${curso.id})" title="Editar curso" aria-label="Editar curso">
@@ -3048,6 +3070,53 @@ async function renderizarAprendizaje() {
   const modulosCurso = modulos.filter(item => item.curso_id === cursoActual.id).sort((a, b) => Number(a.orden) - Number(b.orden));
   const grupos = [...modulosCurso, { id: '', titulo: 'Contenido general', orden: 999999, esGeneral: true }]
     .filter(modulo => modulo.esGeneral ? obtenerItemsModulo('').length > 0 || modulosCurso.length === 0 : true);
+  if (esEstudianteActual()) {
+    const prioridad = item => item.tipoContenido === 'capsula' && item.tipo === 'video' ? 1
+      : item.tipoContenido === 'guia' ? 2
+        : item.tipoContenido === 'capsula' ? 3
+          : item.tipoContenido === 'test' ? 5 : 4;
+    const etiquetas = item => item.tipoContenido === 'capsula' && item.tipo === 'video'
+      ? ['Clase en video', 'Visualiza la clase pregrabada.']
+      : item.tipoContenido === 'guia'
+        ? ['Material de apoyo', 'Descarga las guías o documentos complementarios.']
+        : item.tipoContenido === 'capsula'
+          ? ['Material complementario', 'Consulta los recursos adicionales incluidos por el docente.']
+          : ['Evaluación del módulo', 'Accede directamente a la evaluación correspondiente.'];
+    const modulosHTML = grupos.map((modulo, indiceModulo) => {
+      const items = obtenerItemsModulo(modulo.id).sort((a, b) => prioridad(a) - prioridad(b) || Number(a.orden || 0) - Number(b.orden || 0));
+      const itemsHTML = items.length ? items.map((item, indiceItem) => {
+        const [tipoVisible, ayuda] = etiquetas(item);
+        const completado = item.tipoContenido !== 'test' && contenidoEstaCompletado(item.tipoContenido, item.id);
+        let cuerpo = '';
+        if (item.tipoContenido === 'capsula') {
+          cuerpo = `${item.tipo === 'video' ? renderizarReproductorCapsula(item) : ''}<p>${escaparHtml(item.descripcion || '')}</p>${normalizarUrlRecurso(item.url) ? `<a class="resource-link" target="_blank" rel="noopener" href="${escaparHtml(normalizarUrlRecurso(item.url))}"><i class="fas fa-external-link-alt"></i> Abrir recurso</a>` : ''}`;
+        } else if (item.tipoContenido === 'guia') {
+          cuerpo = `<div class="markdown-preview">${previsualizarMarkdown(item.contenido || '')}</div>${(item.archivos || []).map(archivo => `<a class="resource-link" target="_blank" rel="noopener" href="${escaparHtml(archivo.url)}"><i class="fas fa-download"></i> ${escaparHtml(archivo.nombre)}</a>`).join('')}`;
+        } else {
+          cuerpo = `<p>${escaparHtml(item.descripcion || '')}</p><p>Nota mínima de aprobación: ${obtenerPorcentajeAprobacion(item)}%.</p>`;
+        }
+        const accion = item.tipoContenido === 'test'
+          ? `<button class="btn-primary" onclick="resolverTest('${item.id}')"><i class="fas fa-clipboard-check"></i> Iniciar evaluación</button>`
+          : `<button class="btn-primary" ${completado ? 'disabled' : ''} onclick="marcarContenidoCompletado('${item.tipoContenido}', '${item.id}')"><i class="fas fa-check"></i> ${completado ? 'Contenido completado' : 'Marcar como completado'}</button>`;
+        return `<article class="module-sequence-item ${completado ? 'is-complete' : ''}">
+          <div class="module-sequence-marker">${indiceItem + 1}</div>
+          <div class="module-sequence-content">
+            <span class="module-sequence-type">${tipoVisible}</span>
+            <h4>${escaparHtml(item.titulo)}</h4>
+            <p class="module-sequence-help">${ayuda}</p>
+            <div class="module-sequence-body">${cuerpo}</div>
+            <div class="learning-resource-actions">${accion}</div>
+          </div>
+        </article>`;
+      }).join('') : '<div class="content-empty"><p>Este módulo aún no tiene contenido publicado.</p></div>';
+      return `<section class="student-module-card">
+        <header class="student-module-header"><span>Módulo ${indiceModulo + 1}</span><h3>${escaparHtml(modulo.titulo)}</h3></header>
+        <div class="module-sequence">${itemsHTML}</div>
+      </section>`;
+    }).join('');
+    contenedor.innerHTML = `<div class="student-learning-path">${modulosHTML}</div>`;
+    return;
+  }
   if (!contenidoSeleccionado) {
     const primero = grupos.flatMap(modulo => obtenerItemsModulo(modulo.id))[0];
     if (primero) contenidoSeleccionado = { tipo: primero.tipoContenido, id: primero.id };
@@ -3085,13 +3154,19 @@ async function entrarCurso(id) {
   obtenerInfoProfesor(cursoActual.user_id).then(profesor => {
     document.getElementById('curso-profesor').textContent = profesor?.nombre || 'Profesor no disponible';
   });
-  const guiasCurso = guias.filter(g => g.curso_id === cursoActual.id).length;
-  const tareasCurso = tareas.filter(t => t.curso_id === cursoActual.id).length;
-  document.getElementById('curso-total-guias').textContent = `${guiasCurso} ${guiasCurso === 1 ? 'guía' : 'guías'}`;
-  document.getElementById('curso-total-tareas').textContent = `${tareasCurso} ${tareasCurso === 1 ? 'tarea' : 'tareas'}`;
+  const modulosCurso = modulos.filter(m => m.curso_id === cursoActual.id).length;
+  const minutosCurso = capsulas.filter(c => c.curso_id === cursoActual.id).reduce((total, item) => total + Number(item.duracion || 0), 0);
+  document.getElementById('curso-total-modulos').textContent = `${modulosCurso} ${modulosCurso === 1 ? 'módulo' : 'módulos'}`;
+  document.getElementById('curso-horas-contenido').textContent = `${minutosCurso ? (minutosCurso / 60).toFixed(minutosCurso % 60 === 0 ? 0 : 1) : 0} h de contenido`;
   document.getElementById('curso-objetivos-content').innerHTML = cursoActual.objetivos
     ? previsualizarMarkdown(cursoActual.objetivos)
     : '<p>No se han definido objetivos para este curso.</p>';
+  const requisitosContent = document.getElementById('curso-requisitos-content');
+  if (requisitosContent) {
+    requisitosContent.innerHTML = cursoActual.requisitos
+      ? previsualizarMarkdown(cursoActual.requisitos)
+      : '<p>No se requieren conocimientos previos.</p>';
+  }
   mostrarSeccion('cursoDetalle');
   aplicarPermisosCurso();
   mostrarSeccionCurso('presentacion');
@@ -4854,6 +4929,12 @@ async function renderizarPresentacionCurso() {
   document.getElementById('curso-objetivos-content').innerHTML = cursoActual.objetivos
     ? previsualizarMarkdown(cursoActual.objetivos)
     : '<p>No se han definido objetivos para este curso.</p>';
+  const requisitosContent = document.getElementById('curso-requisitos-content');
+  if (requisitosContent) {
+    requisitosContent.innerHTML = cursoActual.requisitos
+      ? previsualizarMarkdown(cursoActual.requisitos)
+      : '<p>No se requieren conocimientos previos.</p>';
+  }
   const progresoContent = document.getElementById('curso-progreso-content');
   if (progresoContent) {
     const progreso = obtenerResumenProgresoCurso(cursoActual);
@@ -4885,6 +4966,38 @@ async function obtenerPerfilActual() {
     console.error('Error al obtener perfil actual:', error);
     return null;
   }
+}
+
+async function renderizarCertificadosEstudiante() {
+  const contenedor = document.getElementById('certificados-estudiante');
+  if (!contenedor) return;
+  if (!cursos.length) {
+    contenedor.innerHTML = '<div class="content-empty"><i class="fas fa-certificate"></i><h3>Aún no tienes certificados</h3><p>Tus certificados aparecerán aquí cuando completes tus cursos.</p></div>';
+    return;
+  }
+  contenedor.innerHTML = '<p class="text-muted">Revisando tus cursos...</p>';
+  const resultados = await Promise.all(cursos.map(async curso => ({ curso, requisitos: await obtenerRequisitosCertificado(curso) })));
+  contenedor.innerHTML = resultados.map(({ curso, requisitos }) => `
+    <article class="student-certificate-card ${requisitos.certificadoDisponible ? 'is-ready' : ''}">
+      <div class="student-certificate-icon"><i class="fas fa-certificate"></i></div>
+      <div>
+        <span>${requisitos.certificadoDisponible ? 'Disponible' : 'En progreso'}</span>
+        <h3>${escaparHtml(curso.nombre)}</h3>
+        <p>${requisitos.certificadoDisponible ? 'Tu certificado está listo para descargar.' : `Completa el contenido y las evaluaciones para habilitarlo.`}</p>
+      </div>
+      <button class="btn-primary" onclick="abrirCertificadoCurso('${curso.id}')">
+        <i class="fas ${requisitos.certificadoDisponible ? 'fa-download' : 'fa-eye'}"></i>
+        ${requisitos.certificadoDisponible ? 'Ver certificado' : 'Ver avance'}
+      </button>
+    </article>
+  `).join('');
+}
+
+async function abrirCertificadoCurso(cursoId) {
+  const curso = cursos.find(item => String(item.id) === String(cursoId));
+  if (!curso) return;
+  await entrarCurso(curso.id);
+  await activarPestanaCurso('certificado');
 }
 
 async function obtenerRequisitosCertificado(curso) {
@@ -7414,13 +7527,13 @@ const CHATBOT_RESPUESTAS = {
   "necesito hablar con el docente": "Puedes enviarle un correo desde la sección Participantes del curso.",
   "gracias": "¡De nada! 😊 ¿Hay algo más en lo que pueda ayudarte?",
   "muchas gracias": "Con gusto, estoy aquí para ayudarte. ¿Necesitas algo más?",
-  "guías": "Para acceder a las guías:<br>1. Entra a un curso<br>2. Ve a la pestaña 'Guías'<br>3. Haz clic en la guía para abrirla o descargarla",
-  "dónde están las guías": "Dentro del curso, accede a la pestaña 'Guías' para ver los documentos disponibles.",
-  "capsulas": "Las cápsulas de video están en:<br>1. La sección del curso<br>2. Pestaña 'Cápsulas'<br>3. Haz clic en una para verla",
-  "videos": "Puedes ver las cápsulas de video desde la pestaña 'Cápsulas' dentro de tu curso.",
+  "guías": "Para acceder a las guías:<br>1. Entra a un curso<br>2. Abre la sección 'Módulos'<br>3. Busca el material de apoyo correspondiente.",
+  "dónde están las guías": "Dentro del curso, abre 'Módulos'. Allí encontrarás las guías como material de apoyo, junto al resto del contenido.",
+  "capsulas": "Las cápsulas están dentro de la sección 'Módulos', ordenadas en la secuencia de aprendizaje de cada módulo.",
+  "videos": "Puedes ver las clases pregrabadas directamente desde la sección 'Módulos' de tu curso.",
   "reuniones": "Para ver tus reuniones:<br>1. Ingresa a la sección 'Reuniones'<br>2. Verás las próximas sesiones y enlaces de videollamada",
   "videollamada": "Las videollamadas están programadas en la sección Reuniones. Revisa allí las fechas y enlaces.",
-  "clases": "Las clases están organizadas dentro de cada curso. Puedes ver los materiales, tareas, y cápsulas al entrar al curso correspondiente.",
+  "clases": "Las clases y materiales están organizados en secuencia dentro de la sección 'Módulos' de cada curso.",
   "horario": "Por ahora el sistema no tiene un horario integrado, pero puedes usar el calendario para ver fechas importantes de tareas y reuniones.",
   "cuándo tengo clase": "Revisa la sección Reuniones o el calendario para ver fechas programadas.",
   "contacto": "Puedes contactar a tus profesores desde la sección 'Participantes'. Allí verás sus correos y roles.",
@@ -7853,6 +7966,7 @@ window.eliminarReunion = eliminarReunion;
 window.unirseReunion = unirseReunion;
 window.generarEnlaceReunion = generarEnlaceReunion;
 window.descargarCertificado = descargarCertificado;
+window.abrirCertificadoCurso = abrirCertificadoCurso;
 window.seleccionarContenidoCurso = seleccionarContenidoCurso;
 window.marcarContenidoCompletado = marcarContenidoCompletado;
 window.eliminarModulo = eliminarModulo;
